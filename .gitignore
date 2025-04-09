@@ -1,0 +1,15 @@
+# Archivos de configuración sensibles
+.env
+backend/.env
+
+# Dependencias
+node_modules/
+
+# Archivos de log
+*.log
+
+# Otros archivos o carpetas temporales
+tmp/
+dist/
+
+ClaveMongo.txt
