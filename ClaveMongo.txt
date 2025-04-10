@@ -1,7 +1,7 @@
 nombre de usuario: grobier2h
-Contraseña: CBqxctMKQdMyZHaT
+Contraseña: 2SGJhZpEZ3TbwmAN 
 
-mongodb+srv://grobier2h:CBqxctMKQdMyZHaT@atraso.yk7t26q.mongodb.net/?retryWrites=true&w=majority&appName=Atraso
+mongodb+srv://grobier2h:9LP3giFZ2plvTpJu@atraso.yk7t26q.mongodb.net/?retryWrites=true&w=majority&appName=Atraso
 
 
 const { MongoClient, ServerApiVersion } = require('mongodb');
