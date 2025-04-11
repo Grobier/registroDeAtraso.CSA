@@ -6,6 +6,7 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const passport = require('passport');
 const session = require('express-session');
+const createAdminIfNotExists = require('./createAdminIfNotExists');
 
 dotenv.config();
 
@@ -36,14 +37,18 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // Importar rutas
 const studentsRoutes = require('./routes/students');
-// Asumiendo que ya tienes otras rutas (auth y tardiness), las importas si es necesario:
 const authRoutes = require('./routes/auth');
 const tardinessRoutes = require('./routes/tardiness');
 
-// Montar las rutas (cada una solo una vez)
+// Montar las rutas
 app.use('/api/students', studentsRoutes);
 app.use('/auth', authRoutes);
 app.use('/api/tardiness', tardinessRoutes);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Servidor corriendo en puerto ${PORT}`));
+
+app.listen(PORT, async () => {
+  // Crear el usuario administrador por defecto si no existe
+  await createAdminIfNotExists();
+  console.log(`Servidor corriendo en puerto ${PORT}`);
+});

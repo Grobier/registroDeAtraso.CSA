@@ -1,42 +1,44 @@
-// routes/auth.js
+// backend/routes/auth.js
 const express = require('express');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-
 const router = express.Router();
+const bcrypt = require('bcrypt');
+const User = require('../models/User');
+const Session = require('../models/Session');
 
-// Lista de correos que serán administradores (ajusta según tus necesidades)
-const adminEmails = ['lorenzo.grobier@colegiosaintarieli.cl'];
+router.post('/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
-passport.use(new GoogleStrategy({
-  clientID: process.env.GOOGLE_CLIENT_ID,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-  callbackURL: "/auth/google/callback"
-}, (accessToken, refreshToken, profile, done) => {
-  // Supongamos que el correo principal viene en profile.emails[0].value
-  const email = profile.emails[0].value;
-  // Asigna rol según el correo
-  profile.role = adminEmails.includes(email) ? 'admin' : 'user';
-  return done(null, profile);
-}));
+    // 1. Buscar usuario
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(400).json({ message: 'Usuario no encontrado' });
+    }
 
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-passport.deserializeUser((user, done) => {
-  done(null, user);
-});
+    // 2. Verificar contraseña
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Contraseña incorrecta' });
+    }
 
-// Ruta para iniciar sesión con Google
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+    // 3. Crear sesión
+    const session = new Session({
+      userId: user._id,
+      // createdAt y expiresAt se establecen por defecto
+    });
+    await session.save();
 
-// Callback de autenticación con Google
-router.get('/google/callback', 
-  passport.authenticate('google', { failureRedirect: '/' }),
-  (req, res) => {
-    // Redirige al dashboard o a donde prefieras
-    res.redirect('/dashboard');
+    // 4. Devolver sessionId (podrías enviarlo en una cookie httpOnly)
+    res.json({
+      message: 'Login exitoso',
+      sessionId: session._id, 
+      role: user.role  // para uso rápido en frontend (opcional)
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Error interno del servidor' });
   }
-);
+});
 
 module.exports = router;
