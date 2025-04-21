@@ -4,6 +4,8 @@ import { Container, Form, Button, Alert } from 'react-bootstrap';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 const RegisterTardiness = () => {
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -17,7 +19,7 @@ const RegisterTardiness = () => {
 
   // 1. Obtener la lista de cursos del backend (desde /api/students/curso)
   useEffect(() => {
-    axios.get('http://localhost:5000/api/students/curso')
+    axios.get(`${API_BASE_URL}/api/students/curso`)
       .then(response => {
         setCourses(response.data);
       })
@@ -28,7 +30,7 @@ const RegisterTardiness = () => {
   useEffect(() => {
     if (selectedCourse) {
       setStudents([]); // Limpiar estudiantes mientras se cargan los nuevos
-      axios.get(`http://localhost:5000/api/students`, {
+      axios.get(`${API_BASE_URL}/api/students`, {
         params: {
           curso: selectedCourse
         }
@@ -69,7 +71,7 @@ const RegisterTardiness = () => {
         setIsLoading(true);
 
         // Enviar datos
-        axios.post('http://localhost:5000/api/tardiness', {
+        axios.post(`${API_BASE_URL}/api/tardiness`, {
           ...formData,
           rut: selectedStudent,
           curso: selectedCourse

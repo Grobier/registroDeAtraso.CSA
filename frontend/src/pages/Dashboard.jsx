@@ -12,6 +12,8 @@ import './Dashboard.css';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 
 const Dashboard = () => {
   const [tardiness, setTardiness] = useState([]);
@@ -54,14 +56,14 @@ const Dashboard = () => {
     setIsLoading(true);
     try {
       const [statsRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/tardiness/statistics')
+        axios.get(`${API_BASE_URL}/api/tardiness/statistics`)
       ]);
 
       setTardiness(statsRes.data.allTardiness);
       setStudentStats(statsRes.data.statsByStudent);
       setCourseStats(statsRes.data.statsByCourse);
       
-      axios.get('http://localhost:5000/api/students')
+      axios.get(`${API_BASE_URL}/api/students`)
         .then(response => setStudents(response.data))
         .catch(err => console.error("Error al obtener todos los estudiantes:", err));
         
@@ -74,21 +76,18 @@ const Dashboard = () => {
 
   // Cargar datos iniciales
   useEffect(() => {
-    axios.get('http://localhost:5000/api/students/curso')
+    axios.get(`${API_BASE_URL}/api/students/curso`)
       .then(response => setCourses(response.data))
       .catch(err => console.error(err));
   
     fetchData();
-    
-
-    const interval = setInterval(fetchData, 30000);
-
-    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     if (selectedCourse) {
-      axios.get(`http://localhost:5000/api/students?curso=${selectedCourse}`)
+      axios.get(`${API_BASE_URL}/api/students`, {
+        params: { curso: selectedCourse }
+      })
         .then(response => setStudents(response.data))
         .catch(err => console.error(err));
     } else {

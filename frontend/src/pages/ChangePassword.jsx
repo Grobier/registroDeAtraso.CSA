@@ -3,6 +3,8 @@ import { Container, Form, Button, Alert, Card, Row, Col } from 'react-bootstrap'
 import axios from 'axios';
 import './Login.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -18,7 +20,7 @@ function ChangePassword() {
     }
 
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/change-password', {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/change-password`, {
         currentPassword,
         newPassword,
         sessionId: localStorage.getItem('sessionId')

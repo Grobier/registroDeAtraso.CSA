@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 function Register() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -21,7 +23,7 @@ function Register() {
     }
 
     try {
-      const response = await axios.post('http://localhost:3001/api/auth/register', {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/register`, {
         username,
         password,
         role
@@ -121,4 +123,4 @@ function Register() {
   );
 }
 
-export default Register; 
+export default Register;
