@@ -1,0 +1,486 @@
+
+body.dark-mode {
+  background-color: #121212 !important;
+  color: #ffffff !important;
+}
+.custom-tooltip {
+  z-index: 1000;
+  pointer-events: auto !important;
+}
+
+.recharts-wrapper {
+  z-index: 1;
+}
+
+.recharts-tooltip-wrapper {
+  pointer-events: auto !important; 
+  z-index: 9999 !important
+}
+
+.recharts-wrapper {
+  overflow: visible !important;
+  z-index: 9999 !important;  
+}
+.dark-mode .dashboard-container {
+  background-color: #1a1a1a !important; /* o el color que desees */
+  color: #ffffff !important;
+}
+
+.dark-mode .footer {
+  background-color: #1a1a1a !important;
+  color: #ffffff !important;
+}
+
+
+
+.dashboard-container {
+  padding: 2rem;
+  background-color: #f8f9fa;
+  min-height: calc(100vh - 56px);
+  transition: background-color 0.3s ease;
+}
+
+/* Modo Oscuro */
+.dark-mode {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+.dark-mode .dashboard-header {
+  background: linear-gradient(135deg, #0d47a1 0%, #1a237e 100%);
+}
+
+.dark-mode .card {
+  background-color: #2d2d2d;
+  border-color: #404040;
+}
+
+.dark-mode .chart-title {
+  color: #ffffff;
+}
+
+.dark-mode .data-table th {
+  background-color: #2d2d2d;
+  color: #ffffff;
+}
+
+.dark-mode .data-table td {
+  color: #e0e0e0;
+  border-bottom-color: #404040;
+}
+
+.dark-mode .data-table tr:hover {
+  background-color: #3d3d3d;
+}
+
+.dark-mode .filter-select {
+  background-color: #2d2d2d;
+  color: #ffffff;
+  border-color: #404040;
+}
+
+.dark-mode .pagination-button {
+  background-color: #2d2d2d;
+  color: #ffffff;
+  border-color: #404040;
+}
+
+.dark-mode .pagination-button:hover {
+  background-color: #3d3d3d;
+}
+
+.dark-mode .pagination-button.active {
+  background-color: #1a73e8;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard-header {
+  background: linear-gradient(135deg, #1a73e8 0%, #185abc 100%);
+  margin: 0 0 2rem 0;
+  padding: 2rem;
+  color: white;
+  border-radius: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.mode-toggle {
+  padding: 0.5rem;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.dashboard-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: white;
+}
+
+.dashboard-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  margin-bottom: 0;
+}
+
+.stats-container {
+  margin-top: 2rem;
+}
+
+.stats-item {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  height: 100%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  animation: fadeIn 0.5s ease-out;
+  cursor: pointer;
+}
+
+.stats-item:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.stats-icon {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.stats-content {
+  flex: 1;
+}
+
+.stats-item h3 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1;
+  color: white;
+}
+
+.stats-item p {
+  margin: 0.5rem 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.stats-trend {
+  display: block;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.weather-widget {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.weather-widget svg {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.weather-widget h4 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.weather-widget p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.filter-card {
+  margin-bottom: 2rem;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-card .card-title {
+  color: #1a73e8;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.filter-group {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.filter-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #5f6368;
+  z-index: 2;
+}
+
+.filter-select {
+  padding-left: 2.5rem !important;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 0.5rem;
+}
+
+.filter-select:focus {
+  border-color: #1a73e8;
+  box-shadow: 0 0 0 0.2rem rgba(26, 115, 232, 0.25);
+}
+
+.chart-card {
+  height: 100%;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.chart-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.chart-title {
+  color: #202124;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  background-color: #f8f9fa;
+  z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #dee2e6;
+  color: #202124;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.3s ease;
+}
+
+.data-table tbody tr:hover {
+  background-color: rgba(26, 115, 232, 0.05);
+}
+
+.export-button {
+  background-color: #34a853;
+  border-color: #34a853;
+  transition: all 0.3s ease;
+}
+
+.export-button:hover {
+  background-color: #2d9144;
+  border-color: #2d9144;
+  transform: translateY(-2px);
+}
+
+.loading-overlay {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #1a73e8;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.pagination-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #dee2e6;
+  background-color: white;
+  color: #5f6368;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 40px;
+  text-align: center;
+}
+
+.pagination-button:hover {
+  background-color: #f8f9fa;
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.pagination-button.active {
+  background-color: #1a73e8;
+  border-color: #1a73e8;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+  }
+
+  .dashboard-header {
+    margin: 0 0 1rem 0;
+    padding: 1.5rem;
+  }
+
+  .stats-container {
+    margin-top: 1rem;
+  }
+
+  .stats-item {
+    margin-bottom: 1rem;
+  }
+
+  .chart-card {
+    margin-bottom: 1rem;
+  }
+
+  .filter-card .row > div {
+    margin-bottom: 1rem;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+}
+
+/* Tooltips personalizados */
+.custom-tooltip {
+  background-color: rgba(0, 0, 0, 0.8);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  color: rgb(250, 0, 0);
+}
+
+/* Filtros guardados */
+.saved-filters-select {
+  max-width: 200px;
+  margin-left: 1rem;
+}
+
+/* Modal de detalles */
+.detail-modal .modal-content {
+  border-radius: 1rem;
+  border: none;
+}
+
+.dark-mode .detail-modal .modal-content {
+  background-color: #2d2d2d;
+  color: #ffffff;
+}
+
+.dark-mode .detail-modal .modal-header {
+  border-bottom-color: #404040;
+}
+
+.dark-mode .detail-modal .modal-footer {
+  border-top-color: #404040;
+}
+
+/* Tutorial */
+.tutorial-modal .modal-content {
+  border-radius: 1rem;
+  border: none;
+}
+
+.tutorial-modal .modal-body {
+  padding: 2rem;
+}
+
+.tutorial-modal ul {
+  list-style: none;
+  padding: 0;
+}
+
+.tutorial-modal li {
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+}
+
+.tutorial-modal li:before {
+  content: "✓";
+  color: #34a853;
+  margin-right: 1rem;
+}
+
+/* Tooltips de información */
+.info-icon {
+  color: #9c0808;
+  margin-left: 0.5rem;
+  cursor: help;
+}
+
+.dark-mode .info-icon {
+  color: #64b5f6;
+}
+
+/* Efectos hover en la tabla */
+.data-table tbody tr {
+  cursor: pointer;
+}
+
+.data-table tbody tr:hover td {
+  background-color: rgba(26, 115, 232, 0.05);
+}
+
+.dark-mode .data-table tbody tr:hover td {
+  background-color: rgba(255, 255, 255, 0.05);
+} 
+

@@ -1,0 +1,27 @@
+.footer {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  position: relative;
+  bottom: 0;
+  width: 100%;
+  padding: 1rem 0;
+}
+
+.footer-title {
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.footer-text {
+  color: #6c757d;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.footer-copyright {
+  color: #8c98a4;
+  font-size: 0.85rem;
+  display: block;
+  margin-top: 1rem;
+} 
