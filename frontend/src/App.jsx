@@ -38,7 +38,7 @@ function App() {
             {/* Logo y título */}
             <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
               <img
-                src="/Logo.png" 
+                src="./src/public/Logo.png" 
                 alt="Logo"
                 width="40"
                 height="40"
