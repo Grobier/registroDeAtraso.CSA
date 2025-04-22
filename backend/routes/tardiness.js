@@ -111,13 +111,19 @@ router.post('/', async (req, res) => {
       console.log("Correo del apoderado:", student.correoApoderado);
       
       const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
+
+      // Formatear la fecha y hora con la zona horaria correcta
+      const fechaFormateada = moment(newTardiness.fecha).tz('America/Santiago').format('DD/MM/YYYY');
+      const horaFormateada = moment().tz('America/Santiago').format('HH:mm');
+
+      // Opciones del correo
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: student.correoApoderado,
         subject: 'Notificación de Atraso',
         text: `Estimado(a) apoderado(a):
 
-Le informamos que el estudiante ${nombreCompleto} registró un atraso el día ${newTardiness.fecha.toLocaleDateString()} a las ${currentTime}.
+Le informamos que el estudiante ${nombreCompleto} registró un atraso el día ${fechaFormateada} a las ${horaFormateada}.
 Motivo: ${motivo}
 
 Le agradecemos su comprensión. Si tiene alguna duda, no dude en comunicarse con nosotros.
