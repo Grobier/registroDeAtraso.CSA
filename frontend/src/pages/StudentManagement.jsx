@@ -3,6 +3,8 @@ import { Container, Row, Col, Card, Table, Form, Button, Modal, Spinner, Alert }
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL; // Usa directamente la variable de entorno
+
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
@@ -34,7 +36,7 @@ const StudentManagement = () => {
   // Cargar estudiantes
   const fetchStudents = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/students');
+      const response = await axios.get(`${API_BASE_URL}/api/students`);
       setStudents(response.data);
       setFilteredStudents(response.data);
       setLoading(false);
@@ -47,7 +49,7 @@ const StudentManagement = () => {
   // Cargar cursos
   const fetchCourses = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/students/curso');
+      const response = await axios.get(`${API_BASE_URL}/api/students/curso`);
       setCourses(response.data);
     } catch (error) {
       setError('Error al cargar los cursos');
@@ -90,11 +92,11 @@ const StudentManagement = () => {
     try {
       if (currentStudent) {
         // Actualizar estudiante existente
-        await axios.put(`http://localhost:5000/api/students/${currentStudent._id}`, studentForm);
+        await axios.put(`${API_BASE_URL}/api/students/${currentStudent._id}`, studentForm);
         setSuccess('Estudiante actualizado exitosamente');
       } else {
         // Crear nuevo estudiante
-        await axios.post('http://localhost:5000/api/students', studentForm);
+        await axios.post(`${API_BASE_URL}/api/students`, studentForm);
         setSuccess('Estudiante creado exitosamente');
       }
       
@@ -118,7 +120,7 @@ const StudentManagement = () => {
   const handleDeleteStudent = async (id) => {
     if (window.confirm('¿Está seguro de que desea eliminar este estudiante?')) {
       try {
-        await axios.delete(`http://localhost:5000/api/students/${id}`);
+        await axios.delete(`${API_BASE_URL}/api/students/${id}`);
         setSuccess('Estudiante eliminado exitosamente');
         fetchStudents();
       } catch (error) {
@@ -149,7 +151,7 @@ const StudentManagement = () => {
         }));
 
         // Enviar datos al servidor
-        await axios.post('http://localhost:5000/api/students/bulk', formattedData);
+        await axios.post(`${API_BASE_URL}/api/students/bulk`, formattedData);
         setSuccess('Estudiantes importados exitosamente');
         fetchStudents();
       } catch (error) {
@@ -383,4 +385,4 @@ const StudentManagement = () => {
   );
 };
 
-export default StudentManagement; 
+export default StudentManagement;
