@@ -4,6 +4,7 @@ const router = express.Router();
 const Tardiness = require('../models/Tardiness');
 const Student = require('../models/Student');
 const nodemailer = require('nodemailer');
+const moment = require('moment-timezone');
 require('dotenv').config();
 
 // Configuración de Nodemailer con debug y logger activados
@@ -68,8 +69,8 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: "Campos requeridos: motivo, rut y curso." });
     }
 
-    // Asignar la hora actual del servidor (formateada a 2 dígitos: HH:MM)
-    const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    // Asignar la hora actual del servidor con la zona horaria correcta
+    const currentTime = moment().tz('America/Santiago').format('HH:mm'); // Cambia 'America/Santiago' por tu zona horaria
 
     // Guardar el registro de atraso en Tardiness usando el rut recibido (ya como string)
     const newTardiness = new Tardiness({ 

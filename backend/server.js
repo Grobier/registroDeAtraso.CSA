@@ -8,6 +8,10 @@ const passport = require('passport');
 const session = require('express-session');
 const createAdminIfNotExists = require('./createAdminIfNotExists');
 
+process.env.TZ = 'America/Santiago';
+console.log("Zona horaria configurada:", process.env.TZ);
+console.log("Hora actual:", new Date().toLocaleString());
+
 dotenv.config();
 
 const app = express();
