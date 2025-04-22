@@ -16,13 +16,6 @@ function App() {
   );
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-  }, [isDarkMode]);
 
   const handleLogin = () => {
     localStorage.setItem('isAuthenticated', 'true');
@@ -37,47 +30,41 @@ function App() {
   return (
     <div className="d-flex flex-column min-vh-100">
       {/* Botón flotante para cambiar tema */}
-      <div 
-        style={{
-          position: 'fixed',
-          top: '1rem',
-          right: '1rem',
-          zIndex: 9999 // para que quede sobre todo
-        }}
-      >
-        <button
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          style={{
-            background: isDarkMode ? '#333' : '#eee',
-            color: isDarkMode ? '#fff' : '#000',
-            border: 'none',
-            borderRadius: '50%',
-            width: '30px',
-            height: '30px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            fontSize: '1.2rem',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          }}
-          title={isDarkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-        >
-          {isDarkMode ? <FaSun /> : <FaMoon />}
-        </button>
-      </div>
+      
 
       {isAuthenticated && (
-        <Navbar bg="dark" variant="dark" expand="lg">
+        <Navbar bg="primary" variant="dark" expand="lg" className="shadow">
           <Container>
-            <Navbar.Brand as={Link} to="/">INICIO</Navbar.Brand>
+            {/* Logo y título */}
+            <Navbar.Brand as={Link} to="/" className="d-flex align-items-center">
+              <img
+                src="./src/public/Logo.png" // Asegúrate de que el archivo del logo esté en la carpeta public
+                alt="Logo"
+                width="40"
+                height="40"
+                className="d-inline-block align-top me-2"
+              />
+              <span style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>AtrasosApp</span>
+            </Navbar.Brand>
+
+            {/* Botón de colapso para pantallas pequeñas */}
             <Navbar.Toggle aria-controls="basic-navbar-nav" />
+
+            {/* Opciones del menú */}
             <Navbar.Collapse id="basic-navbar-nav">
               <Nav className="me-auto">
-                <Nav.Link as={Link} to="/register">Registrar Atraso</Nav.Link>
-                <Nav.Link as={Link} to="/students">Gestión Estudiantes</Nav.Link>
+                <Nav.Link as={Link} to="/register" className="text-light">
+                  <i className="fas fa-plus-circle me-2"></i> Registrar Atraso
+                </Nav.Link>
+                <Nav.Link as={Link} to="/students" className="text-light">
+                  <i className="fas fa-users me-2"></i> Gestión Estudiantes
+                </Nav.Link>
               </Nav>
-              <Logout onLogout={handleLogout} />
+
+              {/* Botón de cerrar sesión */}
+              <Nav>
+                <Logout onLogout={handleLogout} />
+              </Nav>
             </Navbar.Collapse>
           </Container>
         </Navbar>

@@ -233,7 +233,7 @@ const Dashboard = () => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const calculateWeekdayStats = () => {
-    const weekdays = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado','Domingo',];
     const stats = new Array(7).fill(0);
     
     tardiness.forEach(record => {
@@ -408,7 +408,7 @@ const Dashboard = () => {
     }
     return null;
   };
-  
+
 
   return (
     <div className={`dashboard-container ${isDarkMode ? 'dark-mode' : ''}`}>
@@ -760,7 +760,7 @@ const Dashboard = () => {
         <Card className="chart-card">
           <Card.Body>
             <h3 className="chart-title">Top 5 Estudiantes con más Atrasos</h3>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
                         <BarChart
                data={topStudentsWithNames || []}
                 margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
@@ -795,32 +795,22 @@ const Dashboard = () => {
 
       <Card className="mt-4">
         <Card.Body>
-          <div className="d-flex justify-content-between align-items-center mb-4">
+          <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
             <h3 className="chart-title mb-0">
               Registros de Atrasos
               <OverlayTrigger
                 placement="top"
-                overlay={<Tooltip>
-                  Promedio de minutos de atraso: {averageDelay.toFixed(1)} minutos
-                </Tooltip>}
+                overlay={<Tooltip>Promedio de minutos de atraso: {averageDelay.toFixed(1)} minutos</Tooltip>}
               >
                 <FaInfoCircle className="ms-2" />
               </OverlayTrigger>
             </h3>
-            <div>
-              <Button 
-                variant="outline-primary"
-                className="me-2"
-                onClick={exportToPDF}
-              >
+            <div className="d-flex flex-wrap">
+              <Button variant="outline-primary" className="me-2 mb-2 btn-sm" onClick={exportToPDF}>
                 <FaDownload className="me-2" />
                 Exportar a PDF
               </Button>
-              <Button 
-                className="export-button"
-                onClick={exportToExcel}
-                disabled={filteredTardiness.length === 0}
-              >
+              <Button className="export-button btn-sm mb-2" onClick={exportToExcel} disabled={filteredTardiness.length === 0}>
                 <FaDownload className="me-2" />
                 Exportar a Excel
               </Button>
@@ -834,7 +824,7 @@ const Dashboard = () => {
           ) : (
             <>
               <div className="table-responsive">
-                <table className="data-table">
+                <table className="data-table table table-striped table-hover">
                   <thead>
                     <tr>
                       <th>Fecha</th>
@@ -848,21 +838,14 @@ const Dashboard = () => {
                   <tbody>
                     {currentItems.length > 0 ? (
                       currentItems.map((record, index) => (
-                        <tr key={index} onClick={() => showRecordDetails(record)} style={{cursor: 'pointer'}}>
+                        <tr key={index} onClick={() => showRecordDetails(record)} style={{ cursor: 'pointer' }}>
                           <td>{new Date(record.fecha).toLocaleDateString()}</td>
                           <td>{record.hora}</td>
                           <td>{record.curso}</td>
                           <td>{getStudentName(record.studentRut)}</td>
                           <td>{record.motivo}</td>
                           <td>
-                            <Button 
-                              variant="link" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                showRecordDetails(record);
-                              }}
-                            >
+                            <Button variant="link" size="sm" onClick={(e) => e.stopPropagation()}>
                               <FaSearch />
                             </Button>
                           </td>

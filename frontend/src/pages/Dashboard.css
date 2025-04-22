@@ -1,4 +1,3 @@
-
 body.dark-mode {
   background-color: #121212 !important;
   color: #ffffff !important;
@@ -307,6 +306,7 @@ body.dark-mode {
   background-color: #34a853;
   border-color: #34a853;
   transition: all 0.3s ease;
+  min-width: 120px;
 }
 
 .export-button:hover {
@@ -397,6 +397,19 @@ body.dark-mode {
   .pagination {
     flex-wrap: wrap;
   }
+
+  .chart-title {
+    font-size: 1.2rem;
+  }
+
+  .export-button {
+    width: 100%; /* Los botones ocuparán todo el ancho */
+    margin-bottom: 10px;
+  }
+
+  .table-responsive {
+    overflow-x: auto; /* Asegura que la tabla sea desplazable horizontalmente */
+  }
 }
 
 /* Tooltips personalizados */
@@ -482,5 +495,5 @@ body.dark-mode {
 
 .dark-mode .data-table tbody tr:hover td {
   background-color: rgba(255, 255, 255, 0.05);
-} 
+}
 
