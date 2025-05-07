@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const Student = require('../models/Student');
+const Tardiness = require('../models/Tardiness'); // Asegúrate de importar el modelo
 
 // GET /api/students/curso - Obtiene la lista única de cursos
 router.get('/curso', async (req, res) => {
@@ -116,18 +117,33 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Eliminar estudiante
+// Eliminar estudiante y sus registros asociados
 router.delete('/:id', async (req, res) => {
   try {
+    console.log("DEBUG: Iniciando eliminación del estudiante. ID:", req.params.id);
+    
     const student = await Student.findById(req.params.id);
-    if (student) {
-      await student.remove();
-      res.json({ message: 'Estudiante eliminado' });
-    } else {
-      res.status(404).json({ message: 'Estudiante no encontrado' });
+    if (!student) {
+      console.log("DEBUG: No se encontró el estudiante con ID:", req.params.id);
+      return res.status(404).json({ message: 'Estudiante no encontrado' });
     }
+    
+    console.log("DEBUG: Estudiante encontrado. Rut:", student.rut);
+    
+    console.log("DEBUG: Procediendo a eliminar el estudiante...");
+    const deletionResult = await Student.deleteOne({ _id: req.params.id });
+    console.log("DEBUG: Resultado de eliminación:", deletionResult);
+    if (deletionResult.deletedCount === 0) {
+      console.log("DEBUG: No se eliminó ningún documento");
+      return res.status(500).json({ message: 'No se pudo eliminar el estudiante' });
+    }
+    
+    console.log("DEBUG: Estudiante eliminado exitosamente:", student);
+    return res.json({ message: 'Estudiante eliminado' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("DEBUG: Error en la ruta DELETE /api/students/:id:", error);
+    console.error("DEBUG: Stack:", error.stack);
+    return res.status(500).json({ message: error.message });
   }
 });
 
