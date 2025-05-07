@@ -136,13 +136,24 @@ const RegisterTardiness = () => {
                 {/* Campo motivo */}
                 <Form.Group controlId="formMotivo" className="mb-3">
                   <Form.Label>Motivo</Form.Label>
-                  <Form.Control
-                    type="text"
+                  <Form.Select
                     name="motivo"
                     value={formData.motivo}
                     onChange={handleChange}
-                    placeholder="Tráfico, enfermedad, etc."
-                  />
+                    required
+                  >
+                    <option value="">Selecciona un motivo</option>
+                    <option value="Retraso en transporte">Retraso en transporte</option>
+                    <option value="Dificultades familiares imprevistas">Dificultades familiares imprevistas</option>
+                    <option value="Problemas de salud">Problemas de salud</option>
+                    <option value="Condiciones meteorológicas adversas">Condiciones meteorológicas adversas</option> 
+                    <option value="Despertar tardío">Despertar tardío</option>
+                    <option value="Tráfico">Tráfico</option>
+                    <option value="Fallas en el transporte público">Fallas en el transporte público</option>
+                    <option value="Accidente en el trayecto">Accidente en el trayecto</option>
+                    <option value="Emergencia personal">Emergencia personal</option>
+                    <option value="Se niega a entregar un motivo">Se niega a entregar un motivo</option>
+                  </Form.Select>
                 </Form.Group>
 
                 <div className="text-center">

@@ -121,15 +121,22 @@ router.post('/', async (req, res) => {
         from: process.env.EMAIL_USER,
         to: student.correoApoderado,
         subject: 'Notificación de Atraso',
-        text: `Estimado(a) apoderado(a):
+        text: `Estimado(a) apoderado(a) de ${nombreCompleto},:
 
-Le informamos que el estudiante ${nombreCompleto} registró un atraso el día ${fechaFormateada} a las ${horaFormateada}.
-Motivo: ${motivo}
+Le informamos que el/la estudiante ${nombreCompleto} registró un atraso el día ${fechaFormateada}, 
+ingresando al establecimiento a las ${horaFormateada}.
 
-Le agradecemos su comprensión. Si tiene alguna duda, no dude en comunicarse con nosotros.
+Motivo del atraso: ${motivo}
+
+Le recordamos que la puntualidad es fundamental para favorecer el proceso de
+aprendizaje y que este registro será considerado en la revisión mensual, según lo
+establecido en nuestro Manual de Convivencia Escolar, el cual puede revisar en:
+https://www.colegiosaintarieli.cl/normativa/reglamentos-internos.
+Agradecemos su atención y compromiso.
 
 Atentamente,
-Equipo de Convivencia Escolar`
+
+Equipo directivo.`
       };
 
       // Enviar correo
