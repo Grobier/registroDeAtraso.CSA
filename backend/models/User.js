@@ -1,13 +1,14 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcrypt'); // Declaración única de bcrypt
 
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['admin', 'user'], default: 'user' }
+  email: { type: String, required: true, unique: true },
+  role: { type: String, enum: ['admin', 'user', 'registrador'], default: 'user' }
 });
 
-// Middleware para encriptar la contraseña antes de guardar el usuario
+// Encriptar la contraseña antes de guardar
 userSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   try {

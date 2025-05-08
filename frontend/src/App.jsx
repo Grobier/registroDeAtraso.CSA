@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import RegisterTardiness from './pages/RegisterTardiness';
 import StudentManagement from './pages/StudentManagement';
+import CreateUser from './pages/CreateUser';
 import Logout from './components/Logout';
 import Footer from './components/Footer';
 import { FaSun, FaMoon } from 'react-icons/fa';  // <-- Importa los íconos
@@ -59,6 +60,10 @@ function App() {
                 <Nav.Link as={Link} to="/students" className="text-light">
                   <i className="fas fa-users me-2"></i> Gestión Estudiantes
                 </Nav.Link>
+                {/* Nuevo botón para crear usuario */}
+                <Nav.Link as={Link} to="/create-user" className="text-light">
+                  <i className="fas fa-user-plus me-2"></i> Crear Usuario
+                </Nav.Link>
               </Nav>
 
               {/* Botón de cerrar sesión */}
@@ -96,6 +101,10 @@ function App() {
             element={
               isAuthenticated ? <StudentManagement /> : <Navigate to="/login" />
             }
+          />
+          <Route
+            path="/create-user"
+            element={isAuthenticated ? <CreateUser /> : <Navigate to="/login" />}
           />
         </Routes>
       </Container>

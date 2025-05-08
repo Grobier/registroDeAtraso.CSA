@@ -47,7 +47,12 @@ router.post('/login', async (req, res) => {
 // Ruta para registro de nuevos usuarios
 router.post('/register', async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    const { username, password, email } = req.body;
+
+    // Validar que los campos no estén vacíos
+    if (!username || !password || !email) {
+      return res.status(400).json({ message: 'Todos los campos son obligatorios' });
+    }
 
     // Verificar si el usuario ya existe
     const existingUser = await User.findOne({ username });
@@ -55,19 +60,20 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'El usuario ya existe' });
     }
 
-    // Crear nuevo usuario
-    const newUser = new User({
-      username,
-      password,
-      role: role || 'user'
-    });
+    // Verificar si el correo ya existe
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: 'El correo ya está en uso' });
+    }
 
+    // Crear un nuevo usuario
+    const newUser = new User({ username, password, email, role: 'registrador' });
     await newUser.save();
 
     res.status(201).json({ message: 'Usuario creado exitosamente' });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('Error al registrar usuario:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
   }
 });
 
