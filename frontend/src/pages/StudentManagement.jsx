@@ -36,7 +36,7 @@ const StudentManagement = () => {
   // Cargar estudiantes
   const fetchStudents = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/students`);
+      const response = await axios.get(`${API_BASE_URL}/api/students`, { withCredentials: true });
       setStudents(response.data);
       setFilteredStudents(response.data);
       setLoading(false);
@@ -49,7 +49,7 @@ const StudentManagement = () => {
   // Cargar cursos
   const fetchCourses = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/students/curso`);
+      const response = await axios.get(`${API_BASE_URL}/api/students/curso`); // No requiere auth
       setCourses(response.data);
     } catch (error) {
       setError('Error al cargar los cursos');
@@ -92,11 +92,11 @@ const StudentManagement = () => {
     try {
       if (currentStudent) {
         // Actualizar estudiante existente
-        await axios.put(`${API_BASE_URL}/api/students/${currentStudent._id}`, studentForm);
+        await axios.put(`${API_BASE_URL}/api/students/${currentStudent._id}`, studentForm, { withCredentials: true });
         setSuccess('Estudiante actualizado exitosamente');
       } else {
         // Crear nuevo estudiante
-        await axios.post(`${API_BASE_URL}/api/students`, studentForm);
+        await axios.post(`${API_BASE_URL}/api/students`, studentForm, { withCredentials: true });
         setSuccess('Estudiante creado exitosamente');
       }
       
@@ -120,7 +120,7 @@ const StudentManagement = () => {
   const handleDeleteStudent = async (id) => {
     if (window.confirm('¿Está seguro de que desea eliminar este estudiante?')) {
       try {
-        await axios.delete(`${API_BASE_URL}/api/students/${id}`);
+        await axios.delete(`${API_BASE_URL}/api/students/${id}`, { withCredentials: true });
         setSuccess('Estudiante eliminado exitosamente');
         fetchStudents();
       } catch (error) {
@@ -151,7 +151,7 @@ const StudentManagement = () => {
         }));
 
         // Enviar datos al servidor
-        await axios.post(`${API_BASE_URL}/api/students/bulk`, formattedData);
+        await axios.post(`${API_BASE_URL}/api/students/bulk`, formattedData, { withCredentials: true });
         setSuccess('Estudiantes importados exitosamente');
         fetchStudents();
       } catch (error) {

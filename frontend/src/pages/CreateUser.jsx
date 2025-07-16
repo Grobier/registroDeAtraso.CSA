@@ -4,7 +4,7 @@ import { Form, Button, Alert, Container, Row, Col } from 'react-bootstrap';
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const CreateUser = () => {
-  const [formData, setFormData] = useState({ username: '', password: '', email: '' });
+  const [formData, setFormData] = useState({ username: '', password: '', email: '', role: 'usuario' });
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
@@ -18,16 +18,17 @@ const CreateUser = () => {
     setError('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
+        credentials: 'include', // <--- importante para autenticación con cookies
       });
 
       if (response.ok) {
         const data = await response.json();
         setMessage(data.message || 'Usuario creado exitosamente');
-        setFormData({ username: '', password: '', email: '' }); // Reinicia el formulario
+        setFormData({ username: '', password: '', email: '', role: 'usuario' }); // Reinicia el formulario
       } else {
         const errorData = await response.json();
         setError(errorData.message || 'Error al crear el usuario');
@@ -77,6 +78,13 @@ const CreateUser = () => {
                 placeholder="Ingrese el correo electrónico"
                 required
               />
+            </Form.Group>
+            <Form.Group controlId="formRole" className="mb-3">
+              <Form.Label>Rol</Form.Label>
+              <Form.Select name="role" value={formData.role} onChange={handleChange} required>
+                <option value="usuario">Usuario</option>
+                <option value="admin">Administrador</option>
+              </Form.Select>
             </Form.Group>
             <div className="text-center">
               <Button variant="primary" type="submit">

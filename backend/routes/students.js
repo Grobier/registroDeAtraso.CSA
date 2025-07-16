@@ -2,6 +2,9 @@
 const express = require('express');
 const router = express.Router();
 const Student = require('../models/Student');
+const ActivityLog = require('../models/ActivityLog');
+const { ensureAuthenticated, checkRole } = require('../middlewares/auth');
+const mongoose = require('mongoose');
 
 // GET /api/students/curso - Obtiene la lista única de cursos
 router.get('/curso', async (req, res) => {
@@ -54,7 +57,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Crear nuevo estudiante
-router.post('/', async (req, res) => {
+router.post('/', ensureAuthenticated, checkRole(['admin', 'usuario']), async (req, res) => {
   const student = new Student({
     rut: req.body.rut,
     nombres: req.body.nombres,
@@ -66,6 +69,13 @@ router.post('/', async (req, res) => {
 
   try {
     const newStudent = await student.save();
+    // Registrar actividad
+    let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
+    await ActivityLog.create({
+      user: performedBy,
+      action: 'Crear estudiante',
+      details: `Estudiante creado: ${newStudent.nombres} ${newStudent.apellidosPaterno}`
+    });
     res.status(201).json(newStudent);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -73,10 +83,17 @@ router.post('/', async (req, res) => {
 });
 
 // Importación masiva de estudiantes
-router.post('/bulk', async (req, res) => {
+router.post('/bulk', ensureAuthenticated, checkRole(['admin', 'usuario']), async (req, res) => {
   try {
     const students = req.body;
     const insertedStudents = await Student.insertMany(students, { ordered: false });
+    // Registrar actividad
+    let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
+    await ActivityLog.create({
+      user: performedBy,
+      action: 'Importar estudiantes',
+      details: `Estudiantes importados: ${insertedStudents.length}`
+    });
     res.status(201).json({
       message: 'Estudiantes importados exitosamente',
       count: insertedStudents.length
@@ -95,7 +112,7 @@ router.post('/bulk', async (req, res) => {
 });
 
 // Actualizar estudiante
-router.put('/:id', async (req, res) => {
+router.put('/:id', ensureAuthenticated, checkRole(['admin', 'usuario']), async (req, res) => {
   try {
     const student = await Student.findById(req.params.id);
     if (student) {
@@ -107,6 +124,13 @@ router.put('/:id', async (req, res) => {
       student.correoApoderado = req.body.correoApoderado || student.correoApoderado;
 
       const updatedStudent = await student.save();
+      // Registrar actividad
+      let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
+      await ActivityLog.create({
+        user: performedBy,
+        action: 'Editar estudiante',
+        details: `Estudiante editado: ${updatedStudent.nombres} ${updatedStudent.apellidosPaterno}`
+      });
       res.json(updatedStudent);
     } else {
       res.status(404).json({ message: 'Estudiante no encontrado' });
@@ -117,11 +141,20 @@ router.put('/:id', async (req, res) => {
 });
 
 // Eliminar estudiante
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', ensureAuthenticated, checkRole(['admin', 'usuario']), async (req, res) => {
   try {
-    const student = await Student.findById(req.params.id);
-    if (student) {
-      await student.remove();
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'ID de estudiante no válido' });
+    }
+    const deletedStudent = await Student.findByIdAndDelete(req.params.id);
+    if (deletedStudent) {
+      // Registrar actividad
+      let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
+      await ActivityLog.create({
+        user: performedBy,
+        action: 'Eliminar estudiante',
+        details: `Estudiante eliminado: ${deletedStudent.nombres} ${deletedStudent.apellidosPaterno}`
+      });
       res.json({ message: 'Estudiante eliminado' });
     } else {
       res.status(404).json({ message: 'Estudiante no encontrado' });

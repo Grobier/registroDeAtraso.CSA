@@ -5,7 +5,9 @@ const Tardiness = require('../models/Tardiness');
 const Student = require('../models/Student');
 const nodemailer = require('nodemailer');
 const moment = require('moment-timezone');
+const ActivityLog = require('../models/ActivityLog');
 require('dotenv').config();
+const { ensureAuthenticated } = require('../middlewares/auth');
 
 // Configuración de Nodemailer con debug y logger activados
 const transporter = nodemailer.createTransport({
@@ -52,7 +54,7 @@ const cleanRut = (rut) => {
 };
 
 // 1. Registrar un atraso (la hora se asigna automáticamente)
-router.post('/', async (req, res) => {
+router.post('/', ensureAuthenticated, async (req, res) => {
   try {
     const { motivo, rut, curso } = req.body;
     
@@ -81,6 +83,14 @@ router.post('/', async (req, res) => {
     });
     await newTardiness.save();
     console.log("Registro de atraso guardado:", newTardiness);
+
+    // Registrar actividad
+    let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
+    await ActivityLog.create({
+      user: performedBy,
+      action: 'Registrar atraso',
+      details: `Atraso registrado para RUT: ${rut}, curso: ${curso}`
+    });
 
     // Log 2: Buscar todos los estudiantes para verificar
     const todosLosEstudiantes = await Student.find({});
@@ -168,7 +178,13 @@ router.get('/statistics', async (req, res) => {
     const statsByDay = await Tardiness.aggregate([
       {
         $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$fecha" } },
+          _id: {
+            $dateToString: {
+              format: "%Y-%m-%d",
+              date: "$fecha",
+              timezone: "America/Santiago"
+            }
+          },
           total: { $sum: 1 }
         }
       },

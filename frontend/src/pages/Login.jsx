@@ -2,22 +2,46 @@
 import React, { useState } from 'react';
 import { Container, Form, Button, Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import './Login.css';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 function Login({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [mensaje, setMensaje] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulación básica de autenticación
-    if (username === 'admin' && password === 'admin') {
-      onLogin();              // Notifica a App.jsx que el usuario inició sesión
-      navigate('/dashboard'); // Redirige al Dashboard
-    } else {
-      setMensaje('Credenciales incorrectas');
+    setMensaje('');
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
+        username,
+        password
+      }, {
+        withCredentials: true // <--- importante para autenticación con cookies
+      });
+      if (response.data.sessionId) {
+        // Guardar sesión, rol y username en localStorage
+        localStorage.setItem('sessionId', response.data.sessionId);
+        localStorage.setItem('role', response.data.role);
+        localStorage.setItem('username', username); // <-- Guarda el nombre de usuario
+        localStorage.setItem('isAuthenticated', 'true');
+        onLogin();
+        navigate('/dashboard');
+      } else {
+        setMensaje('Respuesta inesperada del servidor');
+      }
+    } catch (error) {
+      setMensaje(
+        error.response?.data?.message || 'Credenciales incorrectas o error de conexión'
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -59,8 +83,8 @@ function Login({ onLogin }) {
             />
           </Form.Group>
 
-          <Button type="submit" className="login-button">
-            Iniciar Sesión
+          <Button type="submit" className="login-button" disabled={loading}>
+            {loading ? 'Cargando...' : 'Iniciar Sesión'}
           </Button>
 
           <div className="login-footer">

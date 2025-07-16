@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Container, Row, Col, Card, Table, Form, Button, OverlayTrigger, Tooltip, Modal } from 'react-bootstrap';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
@@ -11,6 +11,7 @@ import { FaCalendarAlt, FaUserGraduate, FaSchool, FaDownload, FaFilter, FaClock,
 import './Dashboard.css';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import moment from 'moment-timezone';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -48,6 +49,18 @@ const Dashboard = () => {
   const [averageDelay, setAverageDelay] = useState(0);
   const [weekdayStats, setWeekdayStats] = useState([]);
   const [timeStats, setTimeStats] = useState([]);
+  const [statsByDay, setStatsByDay] = useState([]);
+
+  // Estado para el reloj
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const today = new Date();
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const COLORS = ['#1a73e8', '#34a853', '#fbbc04', '#ea4335', '#46bdc6'];
 
@@ -62,6 +75,7 @@ const Dashboard = () => {
       setTardiness(statsRes.data.allTardiness);
       setStudentStats(statsRes.data.statsByStudent);
       setCourseStats(statsRes.data.statsByCourse);
+      setStatsByDay(statsRes.data.statsByDay || []);
       
       axios.get(`${API_BASE_URL}/api/students`)
         .then(response => setStudents(response.data))
@@ -122,43 +136,43 @@ const Dashboard = () => {
     }, 500);
   };
 
-  const filteredTardiness = tardiness && tardiness.length > 0 ? tardiness.filter(record => {
-    const recordDate = new Date(record.fecha);
-    const matchesCourse = !appliedFilters.course || record.curso === appliedFilters.course;
-    const matchesStudent = !appliedFilters.student || record.studentRut === appliedFilters.student;
-    let matchesStartDate = true;
-    if (appliedFilters.startDate) {
-      const startDateWithoutTime = new Date(appliedFilters.startDate);
-      startDateWithoutTime.setHours(0, 0, 0, 0);
-      const recordDateWithoutTime = new Date(recordDate);
-      recordDateWithoutTime.setHours(0, 0, 0, 0);
-      matchesStartDate = recordDateWithoutTime >= startDateWithoutTime;
-    }
-    let matchesEndDate = true;
-    if (appliedFilters.endDate) {
-      const endDateWithoutTime = new Date(appliedFilters.endDate);
-      endDateWithoutTime.setHours(23, 59, 59, 999);
-      const recordDateWithoutTime = new Date(recordDate);
-      recordDateWithoutTime.setHours(0, 0, 0, 0);
-      matchesEndDate = recordDateWithoutTime <= endDateWithoutTime;
-    }
-    const matchesDateRange = matchesStartDate && matchesEndDate;
-    const result = matchesCourse && matchesStudent && matchesDateRange;
-    
-    if (appliedFilters.course || appliedFilters.student || appliedFilters.startDate || appliedFilters.endDate) {
-      console.log(`Registro ${record._id}:`, {
-        fecha: recordDate.toLocaleDateString(),
-        curso: record.curso,
-        estudianteRut: record.studentRut,
-        matchesCourse, 
-        matchesStudent, 
-        matchesDateRange,
-        incluido: result
-      });
-    }
-    
-    return result;
-  }) : [];
+  const filteredTardiness = useMemo(() => (
+    tardiness && tardiness.length > 0 ? tardiness.filter(record => {
+      const recordDate = new Date(record.fecha);
+      const matchesCourse = !appliedFilters.course || record.curso === appliedFilters.course;
+      const matchesStudent = !appliedFilters.student || record.studentRut === appliedFilters.student;
+      let matchesStartDate = true;
+      if (appliedFilters.startDate) {
+        const startDateWithoutTime = new Date(appliedFilters.startDate);
+        startDateWithoutTime.setHours(0, 0, 0, 0);
+        const recordDateWithoutTime = new Date(recordDate);
+        recordDateWithoutTime.setHours(0, 0, 0, 0);
+        matchesStartDate = recordDateWithoutTime >= startDateWithoutTime;
+      }
+      let matchesEndDate = true;
+      if (appliedFilters.endDate) {
+        const endDateWithoutTime = new Date(appliedFilters.endDate);
+        endDateWithoutTime.setHours(23, 59, 59, 999);
+        const recordDateWithoutTime = new Date(recordDate);
+        recordDateWithoutTime.setHours(0, 0, 0, 0);
+        matchesEndDate = recordDateWithoutTime <= endDateWithoutTime;
+      }
+      const matchesDateRange = matchesStartDate && matchesEndDate;
+      const result = matchesCourse && matchesStudent && matchesDateRange;
+      if (appliedFilters.course || appliedFilters.student || appliedFilters.startDate || appliedFilters.endDate) {
+        console.log(`Registro ${record._id}:`, {
+          fecha: recordDate.toLocaleDateString(),
+          curso: record.curso,
+          estudianteRut: record.studentRut,
+          matchesCourse, 
+          matchesStudent, 
+          matchesDateRange,
+          incluido: result
+        });
+      }
+      return result;
+    }) : []
+  ), [tardiness, appliedFilters]);
 
   useEffect(() => {
     console.log("Filtros aplicados:", appliedFilters);
@@ -175,8 +189,6 @@ const Dashboard = () => {
     name: getStudentName(stat._id),
     rut: stat._id
   }));
-
-  console.log("Datos de topStudentsWithNames:", topStudentsWithNames); 
 
   const exportToExcel = () => {
     const dataToExport = filteredTardiness.map(record => ({
@@ -196,34 +208,71 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    setWeatherData({
-      temp: '18°C',
-      condition: 'Parcialmente nublado',
-      icon: <FaClock />
-    });
+    if (tardiness.length > 0) {
+      // Estadísticas por día de la semana
+      // Alinear con getDay(): 0=Domingo, 1=Lunes, ..., 6=Sábado
+      const weekdays = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const stats = new Array(7).fill(0);
+      tardiness.forEach(record => {
+        const date = new Date(record.fecha);
+        stats[date.getDay()]++;
+      });
+      // Solo lunes a viernes (índices 1 a 5)
+      setWeekdayStats(
+        weekdays.slice(1, 6).map((day, index) => ({
+          name: day,
+          total: stats[index + 1]
+        }))
+      );
 
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const todayAtrasos = tardiness.filter(t => 
-      t.fecha.split('T')[0] === todayStr
-    ).length;
-    
-    setTodayCount(todayAtrasos);
+      // Estadísticas por hora y minuto exactos
+      const timeRanges = {};
+      tardiness.forEach(record => {
+        // Usa hora y minutos exactos
+        const [h, m] = record.hora.split(":");
+        const label = `${h.padStart(2, '0')}:${m.padStart(2, '0')}`;
+        timeRanges[label] = (timeRanges[label] || 0) + 1;
+      });
+      const timeStatsArr = Object.entries(timeRanges).map(([label, count]) => ({
+        hour: label,
+        total: count
+      })).sort((a, b) => a.hour.localeCompare(b.hour));
+      setTimeStats(timeStatsArr);
 
-    const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const weekAtrasos = tardiness.filter(t => 
-      new Date(t.fecha) >= weekAgo
-    ).length;
-    
-    setWeekCount(weekAtrasos);
+      // Promedio de minutos de atraso
+      const totalMinutes = tardiness.reduce((acc, record) => {
+        const [hours, minutes] = record.hora.split(':').map(Number);
+        return acc + (hours * 60 + minutes - 480);
+      }, 0);
+      setAverageDelay(totalMinutes / tardiness.length);
 
-    const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const monthAtrasos = tardiness.filter(t => 
-      new Date(t.fecha) >= monthAgo
-    ).length;
-    
-    setMonthCount(monthAtrasos);
+      // Estadísticas de clima y conteos
+      setWeatherData({
+        temp: '18°C',
+        condition: 'Parcialmente nublado',
+        icon: <FaClock />
+      });
+      // Eliminado el useEffect anidado aquí
+      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const weekAtrasos = tardiness.filter(t => 
+        new Date(t.fecha) >= weekAgo
+      ).length;
+      setWeekCount(weekAtrasos);
+      const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const monthAtrasos = tardiness.filter(t => 
+        new Date(t.fecha) >= monthAgo
+      ).length;
+      setMonthCount(monthAtrasos);
+    }
   }, [tardiness]);
+
+  // useEffect para actualizar el conteo de atrasos de hoy según statsByDay
+  useEffect(() => {
+    // Obtener la fecha de hoy en zona Chile
+    const hoyChile = moment().tz('America/Santiago').format('YYYY-MM-DD');
+    const hoyObj = statsByDay.find(d => d._id === hoyChile);
+    setTodayCount(hoyObj ? hoyObj.total : 0);
+  }, [statsByDay]);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -233,34 +282,20 @@ const Dashboard = () => {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const calculateWeekdayStats = () => {
-    const weekdays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado','Domingo',];
+    // Alinear con getDay(): 0=Domingo, 1=Lunes, ..., 6=Sábado
+    const weekdays = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const stats = new Array(7).fill(0);
-    
     tardiness.forEach(record => {
       const date = new Date(record.fecha);
       stats[date.getDay()]++;
     });
-
-    setWeekdayStats(weekdays.map((day, index) => ({
-      name: day,
-      total: stats[index]
-    })));
-  };
-
-  const calculateTimeStats = () => {
-    const timeRanges = {};
-    
-    tardiness.forEach(record => {
-      const hour = record.hora.split(':')[0];
-      timeRanges[hour] = (timeRanges[hour] || 0) + 1;
-    });
-
-    const stats = Object.entries(timeRanges).map(([hour, count]) => ({
-      hour: `${hour}:00`,
-      total: count
-    })).sort((a, b) => a.hour.localeCompare(b.hour));
-
-    setTimeStats(stats);
+    // Solo lunes a viernes (índices 1 a 5)
+    setWeekdayStats(
+      weekdays.slice(1, 6).map((day, index) => ({
+        name: day,
+        total: stats[index + 1]
+      }))
+    );
   };
 
   const handleSaveFilter = () => {
@@ -287,6 +322,7 @@ const Dashboard = () => {
   };
 
   const showRecordDetails = (record) => {
+    console.log("Abriendo modal", record);
     setSelectedRecord(record);
     setShowDetailModal(true);
   };
@@ -294,7 +330,6 @@ const Dashboard = () => {
   useEffect(() => {
     if (tardiness.length > 0) {
       calculateWeekdayStats();
-      calculateTimeStats();
       
       const totalMinutes = tardiness.reduce((acc, record) => {
         const [hours, minutes] = record.hora.split(':').map(Number);
@@ -305,7 +340,7 @@ const Dashboard = () => {
   }, [tardiness]);
 
   const DetailModal = () => (
-    <Modal show={showDetailModal} onHide={() => setShowDetailModal(false)}>
+    <Modal show={showDetailModal} onHide={() => { console.log("Cerrando modal"); setShowDetailModal(false); }} centered backdrop="static">
       <Modal.Header closeButton>
         <Modal.Title>Detalles del Atraso</Modal.Title>
       </Modal.Header>
@@ -409,9 +444,21 @@ const Dashboard = () => {
     return null;
   };
 
+  // Limitar a los 6 cursos principales y agrupar el resto como "Otros"
+  const maxCursos = 6;
+  let dataCursos = courseStats || [];
+  if (dataCursos.length > maxCursos) {
+    const top = dataCursos.slice(0, maxCursos);
+    const otros = dataCursos.slice(maxCursos);
+    const totalOtros = otros.reduce((sum, item) => sum + item.total, 0);
+    top.push({ _id: 'Otros', total: totalOtros });
+    dataCursos = top;
+  }
 
   return (
     <div className={`dashboard-container ${isDarkMode ? 'dark-mode' : ''}`}>
+      {/* Reloj digital en la parte superior */}
+      <Clock />
       <DetailModal />
       
       <div className="dashboard-header">
@@ -512,7 +559,154 @@ const Dashboard = () => {
           </Col>
         </Row>
       </div>
-      <Card className="filter-card">
+
+
+      <Row className="mb-4">
+        <Col md={6}>
+          <Card className="chart-card">
+            <Card.Body>
+              <h3 className="chart-title">
+                Tendencia de Atrasos por Día
+                <OverlayTrigger
+                  placement="top"
+                  overlay={<Tooltip>Distribución de atrasos por día de la semana</Tooltip>}
+                >
+                  <FaInfoCircle className="ms-2" />
+                </OverlayTrigger>
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={weekdayStats}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <RechartsTooltip />
+                  <Area type="monotone" dataKey="total" fill="#1a73e8" stroke="#1a73e8" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col md={6}>
+          <Card className="chart-card">
+            <Card.Body>
+              <h3 className="chart-title">
+                Distribución por Hora
+                <OverlayTrigger
+                  placement="top"
+                  overlay={<Tooltip>Cantidad de atrasos por hora del día</Tooltip>}
+                >
+                  <FaInfoCircle className="ms-2" />
+                </OverlayTrigger>
+              </h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={timeStats}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="hour" />
+                  <YAxis />
+                  <RechartsTooltip />
+                  <Line type="monotone" dataKey="total" stroke="#34a853" />
+                </LineChart>
+              </ResponsiveContainer>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      <Modal show={showSaveFilterModal} onHide={() => setShowSaveFilterModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Guardar Filtro</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form.Group>
+            <Form.Label>Nombre del filtro</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Ingrese un nombre para el filtro"
+              value={filterName}
+              onChange={(e) => setFilterName(e.target.value)}
+            />
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowSaveFilterModal(false)}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={handleSaveFilter}>
+            Guardar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Row>
+        <Col md={6}>
+          <Card className="chart-card">
+            <Card.Body>
+              <h3 className="chart-title">Atrasos por Curso</h3>
+              <ResponsiveContainer width="100%" height={250}>
+               <PieChart>
+                  <Pie
+                   data={dataCursos}
+                    dataKey="total"
+                    nameKey="_id"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={70}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                 >
+                   {dataCursos && dataCursos.map((entry, index) => (
+                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                   ))}
+                 </Pie>
+                 <RechartsTooltip />
+                 <Legend />
+               </PieChart>
+              </ResponsiveContainer>
+
+            </Card.Body>
+          </Card>
+        </Col>
+        
+        <Col md={6}>
+        
+        <Card className="chart-card">
+          <Card.Body>
+            <h3 className="chart-title">Top 5 Estudiantes con más Atrasos</h3>
+            <ResponsiveContainer width="100%" height={250}>
+                        <BarChart
+               data={topStudentsWithNames || []}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+             >
+                <CartesianGrid strokeDasharray="3 3" />
+                {/* Usamos "name" para que se muestre el nombre en el tooltip */}
+               <XAxis 
+                 dataKey="name" 
+                 tick={{ fontSize: 10 }}
+                 /* Opcional: si quieres formatear el texto, puedes hacerlo aquí */
+                />
+                <YAxis />
+                <RechartsTooltip 
+                  formatter={(value, name, props) => [value, 'Atrasos']}
+                  labelFormatter={(value) => {
+                    const student = topStudentsWithNames.find(s => s.rut === value);
+                    return `Estudiante: ${student ? student.name : value}`;
+                  }}
+                />
+
+                <Legend />
+               <Bar dataKey="total" fill="#0070ff" name="Atrasos" />
+              </BarChart>
+            </ResponsiveContainer>
+         </Card.Body>
+        </Card>
+        
+
+
+        </Col>
+      </Row>
+
+      
+      {/* card de filtros */}
+      <Card className="filter-card mt-4">
         <Card.Body>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <Card.Title>
@@ -650,148 +844,6 @@ const Dashboard = () => {
           </Row>
         </Card.Body>
       </Card>
-      <Row className="mb-4">
-        <Col md={6}>
-          <Card className="chart-card">
-            <Card.Body>
-              <h3 className="chart-title">
-                Tendencia de Atrasos por Día
-                <OverlayTrigger
-                  placement="top"
-                  overlay={<Tooltip>Distribución de atrasos por día de la semana</Tooltip>}
-                >
-                  <FaInfoCircle className="ms-2" />
-                </OverlayTrigger>
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={weekdayStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <RechartsTooltip />
-                  <Area type="monotone" dataKey="total" fill="#1a73e8" stroke="#1a73e8" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </Card.Body>
-          </Card>
-        </Col>
-        <Col md={6}>
-          <Card className="chart-card">
-            <Card.Body>
-              <h3 className="chart-title">
-                Distribución por Hora
-                <OverlayTrigger
-                  placement="top"
-                  overlay={<Tooltip>Cantidad de atrasos por hora del día</Tooltip>}
-                >
-                  <FaInfoCircle className="ms-2" />
-                </OverlayTrigger>
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={timeStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" />
-                  <YAxis />
-                  <RechartsTooltip />
-                  <Line type="monotone" dataKey="total" stroke="#34a853" />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-      <Modal show={showSaveFilterModal} onHide={() => setShowSaveFilterModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Guardar Filtro</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form.Group>
-            <Form.Label>Nombre del filtro</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Ingrese un nombre para el filtro"
-              value={filterName}
-              onChange={(e) => setFilterName(e.target.value)}
-            />
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowSaveFilterModal(false)}>
-            Cancelar
-          </Button>
-          <Button variant="primary" onClick={handleSaveFilter}>
-            Guardar
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      <Row>
-        <Col md={6}>
-          <Card className="chart-card">
-            <Card.Body>
-              <h3 className="chart-title">Atrasos por Curso</h3>
-              <ResponsiveContainer width="100%" height={250}>
-               <PieChart>
-                  <Pie
-                   data={courseStats || []}
-                    dataKey="total"
-                    nameKey="_id"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={70}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                 >
-                   {courseStats && courseStats.map((entry, index) => (
-                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                   ))}
-                 </Pie>
-                 <RechartsTooltip />
-                 <Legend />
-               </PieChart>
-              </ResponsiveContainer>
-
-            </Card.Body>
-          </Card>
-        </Col>
-        
-        <Col md={6}>
-        
-        <Card className="chart-card">
-          <Card.Body>
-            <h3 className="chart-title">Top 5 Estudiantes con más Atrasos</h3>
-            <ResponsiveContainer width="100%" height={250}>
-                        <BarChart
-               data={topStudentsWithNames || []}
-                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-             >
-                <CartesianGrid strokeDasharray="3 3" />
-                {/* Usamos "name" para que se muestre el nombre en el tooltip */}
-               <XAxis 
-                 dataKey="name" 
-                 tick={{ fontSize: 10 }}
-                 /* Opcional: si quieres formatear el texto, puedes hacerlo aquí */
-                />
-                <YAxis />
-                <RechartsTooltip 
-                  formatter={(value, name, props) => [value, 'Atrasos']}
-                  labelFormatter={(value) => {
-                    const student = topStudentsWithNames.find(s => s.rut === value);
-                    return `Estudiante: ${student ? student.name : value}`;
-                  }}
-                />
-
-                <Legend />
-               <Bar dataKey="total" fill="#0070ff" name="Atrasos" />
-              </BarChart>
-            </ResponsiveContainer>
-         </Card.Body>
-        </Card>
-        
-
-
-        </Col>
-      </Row>
 
       <Card className="mt-4">
         <Card.Body>
@@ -832,28 +884,24 @@ const Dashboard = () => {
                       <th>Curso</th>
                       <th>Estudiante</th>
                       <th>Motivo</th>
-                      <th>Acciones</th>
+                      {/* Eliminar columna Acciones */}
                     </tr>
                   </thead>
                   <tbody>
                     {currentItems.length > 0 ? (
                       currentItems.map((record, index) => (
-                        <tr key={index} onClick={() => showRecordDetails(record)} style={{ cursor: 'pointer' }}>
+                        <tr key={index} style={{ cursor: 'pointer' }}>
                           <td>{new Date(record.fecha).toLocaleDateString()}</td>
                           <td>{record.hora}</td>
                           <td>{record.curso}</td>
                           <td>{getStudentName(record.studentRut)}</td>
                           <td>{record.motivo}</td>
-                          <td>
-                            <Button variant="link" size="sm" onClick={(e) => e.stopPropagation()}>
-                              <FaSearch />
-                            </Button>
-                          </td>
+                          {/* Eliminar celda de la lupa */}
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="text-center">
+                        <td colSpan="5" className="text-center">
                           No se encontraron registros
                         </td>
                       </tr>
@@ -863,27 +911,60 @@ const Dashboard = () => {
               </div>
 
               {totalPages > 1 && (
-                <div className="pagination">
+                <div className="pagination d-flex justify-content-center align-items-center mt-3">
                   <Button
-                    variant="link"
+                    variant="outline-primary"
+                    size="sm"
                     onClick={() => paginate(1)}
                     disabled={currentPage === 1}
+                    className="me-2"
                   >
                     Primera
                   </Button>
-                  {[...Array(totalPages)].map((_, index) => (
-                    <button
-                      key={index + 1}
-                      className={`pagination-button ${currentPage === index + 1 ? 'active' : ''}`}
-                      onClick={() => paginate(index + 1)}
-                    >
-                      {index + 1}
-                    </button>
-                  ))}
+                  {/* Lógica de paginación avanzada */}
+                  {(() => {
+                    const pageButtons = [];
+                    const pageWindow = 2; // Cuántos botones antes y después de la actual
+                    let startPage = Math.max(1, currentPage - pageWindow);
+                    let endPage = Math.min(totalPages, currentPage + pageWindow);
+                    if (startPage > 1) {
+                      pageButtons.push(
+                        <Button key={1} variant="outline-secondary" size="sm" onClick={() => paginate(1)} className="mx-1">1</Button>
+                      );
+                      if (startPage > 2) {
+                        pageButtons.push(<span key="start-ellipsis" className="mx-1">...</span>);
+                      }
+                    }
+                    for (let i = startPage; i <= endPage; i++) {
+                      pageButtons.push(
+                        <Button
+                          key={i}
+                          variant={i === currentPage ? "primary" : "outline-secondary"}
+                          size="sm"
+                          onClick={() => paginate(i)}
+                          className={i === currentPage ? "mx-1 fw-bold" : "mx-1"}
+                          disabled={i === currentPage}
+                        >
+                          {i}
+                        </Button>
+                      );
+                    }
+                    if (endPage < totalPages) {
+                      if (endPage < totalPages - 1) {
+                        pageButtons.push(<span key="end-ellipsis" className="mx-1">...</span>);
+                      }
+                      pageButtons.push(
+                        <Button key={totalPages} variant="outline-secondary" size="sm" onClick={() => paginate(totalPages)} className="mx-1">{totalPages}</Button>
+                      );
+                    }
+                    return pageButtons;
+                  })()}
                   <Button
-                    variant="link"
+                    variant="outline-primary"
+                    size="sm"
                     onClick={() => paginate(totalPages)}
                     disabled={currentPage === totalPages}
+                    className="ms-2"
                   >
                     Última
                   </Button>
@@ -896,5 +977,26 @@ const Dashboard = () => {
     </div>
   );
 };
+
+// Componente de reloj digital aislado
+function Clock() {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 10 }}>
+      <span style={{ fontWeight: 'bold', fontSize: '1.1rem', color: '#1a73e8' }}>
+        {currentTime.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      </span>
+      <span style={{ marginLeft: 8, color: '#888', fontSize: '0.95rem' }}>
+        {Intl.DateTimeFormat().resolvedOptions().timeZone}
+      </span>
+    </div>
+  );
+}
 
 export default Dashboard;
