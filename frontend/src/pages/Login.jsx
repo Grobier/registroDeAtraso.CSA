@@ -1,6 +1,7 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
 import { Container, Form, Button, Alert } from 'react-bootstrap';
+import Spinner from 'react-bootstrap/Spinner';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
@@ -84,7 +85,19 @@ function Login({ onLogin }) {
           </Form.Group>
 
           <Button type="submit" className="login-button" disabled={loading}>
-            {loading ? 'Cargando...' : 'Iniciar Sesión'}
+            {loading ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  role="status"
+                  aria-hidden="true"
+                  className="me-2"
+                />
+                Cargando...
+              </>
+            ) : 'Iniciar Sesión'}
           </Button>
 
           <div className="login-footer">
