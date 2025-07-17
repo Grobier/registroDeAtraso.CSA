@@ -59,8 +59,8 @@ app.use(session({
     resave: false,
     saveUninitialized: true,
     cookie: {
-        sameSite: 'lax', // Compatible con desarrollo local
-        secure: false    // Importante: false en localhost
+        sameSite: 'none', 
+        secure: true    
         // domain: 'localhost' // Eliminado para evitar problemas en desarrollo local
     }
 }));

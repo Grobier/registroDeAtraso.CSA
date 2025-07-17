@@ -12,18 +12,18 @@ const { ensureAuthenticated } = require('../middlewares/auth');
 
 router.post('/login', passport.authenticate('local'), (req, res) => {
   // 4. Crear sesión personalizada (opcional)
-  const session = new Session({
+    const session = new Session({
     userId: req.user._id,
-    // createdAt y expiresAt se establecen por defecto
-  });
+      // createdAt y expiresAt se establecen por defecto
+    });
   session.save();
 
   // 5. Devolver sessionId (podrías enviarlo en una cookie httpOnly)
-  res.json({
-    message: 'Login exitoso',
-    sessionId: session._id,
+    res.json({
+      message: 'Login exitoso',
+      sessionId: session._id, 
     role: req.user.role  // para uso rápido en frontend (opcional)
-  });
+    });
   // Registrar actividad de login
   ActivityLog.create({
     user: req.user.username,

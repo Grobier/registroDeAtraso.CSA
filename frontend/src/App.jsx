@@ -226,37 +226,37 @@ function App() {
           </div>
         )}
         <div className={`flex-grow-1 d-flex flex-column main-content-area${sidebarOpen ? (sidebarCollapsed ? ' sidebar-collapsed' : ' sidebar-expanded') : ''}`}>
-          <Container className={!isAuthenticated ? 'p-0 m-0 mw-100 flex-grow-1' : 'mt-3 flex-grow-1'}>
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-                }
-              />
-              <Route path="/login" element={<Login onLogin={handleLogin} />} />
-              <Route
-                path="/dashboard"
-                element={
-                  isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
-                }
-              />
-              <Route
-                path="/register"
-                element={
-                  isAuthenticated ? <RegisterTardiness /> : <Navigate to="/login" />
-                }
-              />
+      <Container className={!isAuthenticated ? 'p-0 m-0 mw-100 flex-grow-1' : 'mt-3 flex-grow-1'}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+            }
+          />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route
+            path="/dashboard"
+            element={
+              isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              isAuthenticated ? <RegisterTardiness /> : <Navigate to="/login" />
+            }
+          />
               {/* Solo admin y registrador pueden ver gestión estudiantes */}
-              <Route
-                path="/students"
-                element={
+          <Route
+            path="/students"
+            element={
                   isAuthenticated && (role === 'admin' || role === 'registrador' || role === 'usuario') ? <StudentManagement /> : <Navigate to="/dashboard" />
-                }
-              />
+            }
+          />
               {/* Solo admin puede crear usuario */}
-              <Route
-                path="/create-user"
+          <Route
+            path="/create-user"
                 element={
                   isAuthenticated && role === 'admin' ? <CreateUser /> : <Navigate to="/dashboard" />
                 }
@@ -267,10 +267,10 @@ function App() {
                 element={
                   isAuthenticated && role === 'admin' ? <ActivityLog /> : <Navigate to="/dashboard" />
                 }
-              />
-            </Routes>
-          </Container>
-          <Footer />
+          />
+        </Routes>
+      </Container>
+      <Footer />
           {/* Modal de gestión de usuarios (solo admin) */}
           <Modal show={showUserModal} onHide={() => setShowUserModal(false)} size="lg">
             <Modal.Header closeButton>
