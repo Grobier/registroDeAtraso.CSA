@@ -11,6 +11,7 @@ const User = require('./models/User');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
 const path = require('path');
+const MongoStore = require('connect-mongo');
 
 process.env.TZ = 'America/Santiago';
 console.log("Zona horaria configurada:", process.env.TZ);
@@ -61,7 +62,11 @@ app.use(morgan('dev'));
 app.use(session({
     secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: 'sessions'
+    }),
     cookie: {
         sameSite: 'none', 
         secure: true    
