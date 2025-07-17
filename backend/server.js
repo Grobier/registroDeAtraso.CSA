@@ -21,16 +21,34 @@ const app = express();
 
 // Middlewares
 app.use(express.json());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://registrodeatraso-frontend.onrender.com'
+];
+
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Permitir sin origin (Postman) o si está en la lista
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Permitir preflight para cualquier ruta
+// Opciones para preflight
 app.options('*', cors({
-  origin: 'http://localhost:5173',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(morgan('dev'));
