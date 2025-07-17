@@ -78,6 +78,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 passport.serializeUser((user, done) => {
+  console.log('Serializando usuario:', user._id);
   done(null, user._id);
 });
 
