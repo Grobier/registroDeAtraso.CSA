@@ -10,6 +10,7 @@ const createOrUpdateAdmin = require('./createAdminIfNotExists');
 const User = require('./models/User');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
+const path = require('path');
 
 process.env.TZ = 'America/Santiago';
 console.log("Zona horaria configurada:", process.env.TZ);
@@ -111,6 +112,16 @@ app.use('/api/students', studentsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tardiness', tardinessRoutes);
 app.use('/api/activity-log', activityLogRoutes);
+
+// Servir archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Para cualquier ruta que no sea API, devolver index.html (SPA)
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  }
+});
 
 const PORT = process.env.PORT || 5000;
 
