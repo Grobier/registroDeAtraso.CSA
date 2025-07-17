@@ -13,7 +13,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import moment from 'moment-timezone';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 
 const Dashboard = () => {

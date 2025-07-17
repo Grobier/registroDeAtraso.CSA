@@ -3,7 +3,7 @@ import { Container, Row, Col, Card, Table, Form, Button, Modal, Spinner, Alert }
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL; // Usa directamente la variable de entorno
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);
