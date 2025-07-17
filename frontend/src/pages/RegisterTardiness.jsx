@@ -19,7 +19,7 @@ const RegisterTardiness = () => {
 
   // Obtener la lista de cursos
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/students/curso`)
+    axios.get(`${API_BASE_URL}/api/students/curso`, { withCredentials: true })
       .then(response => setCourses(response.data))
       .catch(err => console.error("Error al obtener cursos:", err));
   }, []);
@@ -28,7 +28,7 @@ const RegisterTardiness = () => {
   useEffect(() => {
     if (selectedCourse) {
       setStudents([]);
-      axios.get(`${API_BASE_URL}/api/students`, { params: { curso: selectedCourse } })
+      axios.get(`${API_BASE_URL}/api/students`, { params: { curso: selectedCourse }, withCredentials: true })
         .then(response => setStudents(response.data))
         .catch(err => {
           console.error("Error al obtener estudiantes:", err);
