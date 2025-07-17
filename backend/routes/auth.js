@@ -10,26 +10,21 @@ const passport = require('passport');
 // Middleware para verificar autenticación
 const { ensureAuthenticated } = require('../middlewares/auth');
 
-router.post('/login', passport.authenticate('local'), (req, res) => {
-  // 4. Crear sesión personalizada (opcional)
-    const session = new Session({
-    userId: req.user._id,
-      // createdAt y expiresAt se establecen por defecto
+// Login con manejo manual de sesión
+router.post('/login', (req, res, next) => {
+  passport.authenticate('local', (err, user, info) => {
+    if (err) return next(err);
+    if (!user) return res.status(401).json({ message: info?.message || 'Credenciales incorrectas' });
+    req.login(user, (err) => {
+      if (err) return next(err);
+      // Aquí la sesión está establecida y Passport serializó el usuario
+      res.json({
+        message: 'Login exitoso',
+        sessionId: req.sessionID,
+        role: user.role
+      });
     });
-  session.save();
-
-  // 5. Devolver sessionId (podrías enviarlo en una cookie httpOnly)
-    res.json({
-      message: 'Login exitoso',
-      sessionId: session._id, 
-    role: req.user.role  // para uso rápido en frontend (opcional)
-    });
-  // Registrar actividad de login
-  ActivityLog.create({
-    user: req.user.username,
-    action: 'Login',
-    details: `Usuario inició sesión.`
-  });
+  })(req, res, next);
 });
 
 // Ruta para registro de nuevos usuarios
