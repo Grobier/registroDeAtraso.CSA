@@ -12,6 +12,7 @@ const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
 const path = require('path');
 const MongoStore = require('connect-mongo');
+const isProduction = process.env.NODE_ENV === 'production';
 
 process.env.TZ = 'America/Santiago';
 console.log("Zona horaria configurada:", process.env.TZ);
@@ -68,9 +69,9 @@ app.use(session({
       collectionName: 'sessions'
     }),
     cookie: {
-        sameSite: 'none', 
-        secure: true    
-        // domain: 'localhost' // Eliminado para evitar problemas en desarrollo local
+        sameSite: isProduction ? 'none' : 'lax',
+        secure: isProduction,
+        httpOnly: true
     }
 }));
 
@@ -84,14 +85,16 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    console.log('Deserializando usuario con id:', id);
+    console.log('deserializeUser: id recibido:', id);
     const user = await User.findById(id);
     if (!user) {
-      console.log('Usuario no encontrado en deserialización');
+      console.log('deserializeUser: Usuario NO encontrado para id:', id);
+    } else {
+      console.log('deserializeUser: Usuario encontrado:', user.username || user.email || user._id);
     }
     done(null, user);
   } catch (err) {
-    console.log('Error en deserialización:', err);
+    console.log('deserializeUser: Error:', err);
     done(err);
   }
 });
