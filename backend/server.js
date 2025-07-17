@@ -6,35 +6,35 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const passport = require('passport');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const createOrUpdateAdmin = require('./createAdminIfNotExists');
 const User = require('./models/User');
 const LocalStrategy = require('passport-local').Strategy;
 const bcrypt = require('bcrypt');
 const path = require('path');
-const MongoStore = require('connect-mongo');
-const isProduction = process.env.NODE_ENV === 'production';
 
+dotenv.config();
 process.env.TZ = 'America/Santiago';
 console.log("Zona horaria configurada:", process.env.TZ);
 console.log("Hora actual:", new Date().toLocaleString());
 
-dotenv.config();
-
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 
-// Servir archivos estáticos del frontend ANTES de CORS
+// Servir archivos estáticos del frontend (SPA)
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Middlewares
+// Middleware JSON
 app.use(express.json());
+
+// CORS
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://registrodeatraso-csa.onrender.com'
+  'https://registrodeatraso-frontend.onrender.com'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir sin origin (Postman) o si está en la lista
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -46,7 +46,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Opciones para preflight
 app.options('*', cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -57,24 +56,26 @@ app.options('*', cors({
   },
   credentials: true
 }));
+
 app.use(morgan('dev'));
 
-// Configuración de sesión para Passport (asegúrate de tener SESSION_SECRET en tu .env)
+// Sesión persistente con Mongo
 app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
-      collectionName: 'sessions'
-    }),
-    cookie: {
-        sameSite: isProduction ? 'none' : 'lax',
-        secure: isProduction,
-        httpOnly: true
-    }
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    collectionName: 'sessions'
+  }),
+  cookie: {
+    sameSite: isProduction ? 'none' : 'lax',
+    secure: isProduction,
+    httpOnly: true
+  }
 }));
 
+// Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -85,16 +86,16 @@ passport.serializeUser((user, done) => {
 
 passport.deserializeUser(async (id, done) => {
   try {
-    console.log('deserializeUser: id recibido:', id);
+    console.log('🟨 ID recibido para deserializar:', id);
     const user = await User.findById(id);
     if (!user) {
-      console.log('deserializeUser: Usuario NO encontrado para id:', id);
+      console.log('🟥 Usuario NO encontrado en la base de datos');
     } else {
-      console.log('deserializeUser: Usuario encontrado:', user.username || user.email || user._id);
+      console.log('🟩 Usuario deserializado correctamente:', user.username);
     }
     done(null, user);
   } catch (err) {
-    console.log('deserializeUser: Error:', err);
+    console.error('❌ Error en deserializeUser:', err);
     done(err);
   }
 });
@@ -113,24 +114,23 @@ passport.use(new LocalStrategy(
   }
 ));
 
-// Conexión a MongoDB usando Mongoose
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log("Conectado a MongoDB con Mongoose"))
-  .catch(err => console.error("Error de conexión:", err));
+// Conexión a MongoDB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("✅ Conectado a MongoDB con Mongoose"))
+  .catch(err => console.error("❌ Error de conexión:", err));
 
-// Importar rutas
+// Rutas
 const studentsRoutes = require('./routes/students');
 const authRoutes = require('./routes/auth');
 const tardinessRoutes = require('./routes/tardiness');
 const activityLogRoutes = require('./routes/activityLog');
 
-// Montar las rutas
 app.use('/api/students', studentsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tardiness', tardinessRoutes);
 app.use('/api/activity-log', activityLogRoutes);
 
-// Para cualquier ruta que no sea API, devolver index.html (SPA)
+// SPA: redirigir todo a index.html (excepto /api)
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
@@ -140,6 +140,6 @@ app.get('*', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, async () => {
-  console.log(`Servidor corriendo en puerto ${PORT}`);
-  await createOrUpdateAdmin(); // Llama a la función para crear el usuario administrador
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  await createOrUpdateAdmin();
 });
