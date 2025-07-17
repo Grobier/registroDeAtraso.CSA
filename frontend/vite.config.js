@@ -6,6 +6,7 @@ import path from 'path'
 import { createHtmlPlugin } from 'vite-plugin-html'
 
 export default defineConfig({
+  base: './', // <-- Asegura rutas relativas correctas para producción en backend
   plugins: [
     react(),
     createHtmlPlugin() // 👈 Asegura carga del HTML correctamente
