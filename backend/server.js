@@ -20,11 +20,14 @@ dotenv.config();
 
 const app = express();
 
+// Servir archivos estáticos del frontend ANTES de CORS
+app.use(express.static(path.join(__dirname, 'dist')));
+
 // Middlewares
 app.use(express.json());
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://registrodeatraso-frontend.onrender.com'
+  'https://registrodeatraso-csa.onrender.com'
 ];
 
 app.use(cors({
@@ -112,9 +115,6 @@ app.use('/api/students', studentsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tardiness', tardinessRoutes);
 app.use('/api/activity-log', activityLogRoutes);
-
-// Servir archivos estáticos del frontend
-app.use(express.static(path.join(__dirname, 'dist')));
 
 // Para cualquier ruta que no sea API, devolver index.html (SPA)
 app.get('*', (req, res) => {
