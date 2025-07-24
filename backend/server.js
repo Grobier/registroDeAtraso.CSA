@@ -29,9 +29,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use(express.json());
 
 // CORS
-const allowedOrigins = [
-  'http://localhost:5173'
-];
+const allowedOrigins = ['*'];
 
 app.use(cors({
   origin: function (origin, callback) {
