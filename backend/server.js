@@ -20,6 +20,7 @@ console.log("Hora actual:", new Date().toLocaleString());
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
+console.log('isProduction:', isProduction, '| NODE_ENV:', process.env.NODE_ENV);
 
 // Servir archivos estáticos del frontend (SPA)
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -29,8 +30,7 @@ app.use(express.json());
 
 // CORS
 const allowedOrigins = [
-  'http://localhost:5173',
-  'https://registrodeatraso-frontend.onrender.com'
+  'http://localhost:5173'
 ];
 
 app.use(cors({
@@ -41,9 +41,7 @@ app.use(cors({
       callback(new Error('No permitido por CORS'));
     }
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  credentials: true
 }));
 
 app.options('*', cors({
@@ -70,7 +68,7 @@ app.use(session({
   }),
   cookie: {
     sameSite: isProduction ? 'none' : 'lax',
-    secure: isProduction,
+    secure: isProduction ? true : false,
     httpOnly: true
   }
 }));

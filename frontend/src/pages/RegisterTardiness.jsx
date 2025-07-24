@@ -115,7 +115,7 @@ const RegisterTardiness = () => {
             <Form.Select value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)} className="input-modern">
               <option value="">Seleccione un estudiante</option>
               {students.map((student) => (
-                <option key={student._id} value={student._id}>{student.nombres} {student.apellidosPaterno} {student.apellidosMaterno}</option>
+                <option key={student._id} value={student.rut}>{student.nombres} {student.apellidosPaterno} {student.apellidosMaterno}</option>
               ))}
             </Form.Select>
           </Form.Group>
