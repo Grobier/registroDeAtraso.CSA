@@ -69,7 +69,7 @@ const Dashboard = () => {
     setIsLoading(true);
     try {
       const [statsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/tardiness/statistics`)
+        axios.get(`${API_BASE_URL}/api/tardiness/statistics`, { withCredentials: true })
       ]);
 
       setTardiness(statsRes.data.allTardiness);
@@ -77,7 +77,7 @@ const Dashboard = () => {
       setCourseStats(statsRes.data.statsByCourse);
       setStatsByDay(statsRes.data.statsByDay || []);
       
-      axios.get(`${API_BASE_URL}/api/students`)
+      axios.get(`${API_BASE_URL}/api/students`, { withCredentials: true })
         .then(response => setStudents(response.data))
         .catch(err => console.error("Error al obtener todos los estudiantes:", err));
         
@@ -90,7 +90,7 @@ const Dashboard = () => {
 
   // Cargar datos iniciales
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/students/curso`)
+    axios.get(`${API_BASE_URL}/api/students/curso`, { withCredentials: true })
       .then(response => setCourses(response.data))
       .catch(err => console.error(err));
   
@@ -100,7 +100,8 @@ const Dashboard = () => {
   useEffect(() => {
     if (selectedCourse) {
       axios.get(`${API_BASE_URL}/api/students`, {
-        params: { curso: selectedCourse }
+        params: { curso: selectedCourse },
+        withCredentials: true
       })
         .then(response => setStudents(response.data))
         .catch(err => console.error(err));
