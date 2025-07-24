@@ -51,8 +51,8 @@ app.use(session({
     collectionName: 'sessions'
   }),
   cookie: {
-    sameSite: isProduction ? 'none' : 'lax',
-    secure: isProduction ? true : false,
+    sameSite: 'lax',
+    secure: isProduction,
     httpOnly: true
   }
 }));
