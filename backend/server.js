@@ -51,7 +51,7 @@ app.use(session({
     collectionName: 'sessions'
   }),
   cookie: {
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     secure: isProduction,
     httpOnly: true
   }
