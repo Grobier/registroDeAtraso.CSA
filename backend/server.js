@@ -29,7 +29,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 app.use(express.json());
 
 const allowedOrigins = isProduction
-  ? ['https://registrodeatraso-frontend.onrender.com']
+  ? ['https://registrodeatraso-csa.onrender.com']
   : ['http://localhost:5173'];
 
 app.use(cors({
