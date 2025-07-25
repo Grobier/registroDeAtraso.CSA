@@ -28,14 +28,17 @@ app.use(express.static(path.join(__dirname, 'dist')));
 // Middleware JSON
 app.use(express.json());
 
-// CORS
+const allowedOrigins = isProduction
+  ? ['https://registrodeatraso-frontend.onrender.com']
+  : ['http://localhost:5173'];
+
 app.use(cors({
-  origin: true,
+  origin: allowedOrigins[0],
   credentials: true
 }));
 
 app.options('*', cors({
-  origin: true,
+  origin: allowedOrigins[0],
   credentials: true
 }));
 
