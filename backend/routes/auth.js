@@ -15,6 +15,7 @@ router.post('/login', (req, res, next) => {
   console.log('\n=== INTENTANDO LOGIN ===');
   console.log('Body recibido:', req.body);
   console.log('Session ID antes del login:', req.sessionID);
+  console.log('Cookies antes del login:', req.cookies);
   
   passport.authenticate('local', (err, user, info) => {
     if (err) {
@@ -38,6 +39,10 @@ router.post('/login', (req, res, next) => {
       console.log('Session ID después del login:', req.sessionID);
       console.log('req.user después del login:', req.user);
       console.log('req.isAuthenticated():', req.isAuthenticated());
+      console.log('Cookies después del login:', req.cookies);
+      
+      // Establecer headers de respuesta para debugging
+      res.setHeader('Set-Cookie', `sessionId=${req.sessionID}; Path=/; HttpOnly; SameSite=None; Secure`);
       
       // Aquí la sesión está establecida y Passport serializó el usuario
       res.json({
