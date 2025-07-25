@@ -12,11 +12,33 @@ const { ensureAuthenticated } = require('../middlewares/auth');
 
 // Login con manejo manual de sesión
 router.post('/login', (req, res, next) => {
+  console.log('\n=== INTENTANDO LOGIN ===');
+  console.log('Body recibido:', req.body);
+  console.log('Session ID antes del login:', req.sessionID);
+  
   passport.authenticate('local', (err, user, info) => {
-    if (err) return next(err);
-    if (!user) return res.status(401).json({ message: info?.message || 'Credenciales incorrectas' });
+    if (err) {
+      console.log('❌ Error en autenticación:', err);
+      return next(err);
+    }
+    if (!user) {
+      console.log('❌ Usuario no encontrado o credenciales incorrectas');
+      return res.status(401).json({ message: info?.message || 'Credenciales incorrectas' });
+    }
+    
+    console.log('✅ Usuario autenticado correctamente:', user.username);
+    
     req.login(user, (err) => {
-      if (err) return next(err);
+      if (err) {
+        console.log('❌ Error en req.login:', err);
+        return next(err);
+      }
+      
+      console.log('✅ Login exitoso - Sesión establecida');
+      console.log('Session ID después del login:', req.sessionID);
+      console.log('req.user después del login:', req.user);
+      console.log('req.isAuthenticated():', req.isAuthenticated());
+      
       // Aquí la sesión está establecida y Passport serializó el usuario
       res.json({
         message: 'Login exitoso',

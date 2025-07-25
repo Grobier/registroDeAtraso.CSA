@@ -64,6 +64,20 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Middleware de logging para debugging
+app.use((req, res, next) => {
+  console.log(`\n🔍 ${req.method} ${req.path}`);
+  console.log('📋 Headers:', {
+    'cookie': req.headers.cookie ? 'Presente' : 'Ausente',
+    'origin': req.headers.origin,
+    'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
+  });
+  console.log('🍪 Cookies recibidas:', req.cookies);
+  console.log('👤 req.user:', req.user ? req.user.username : 'undefined');
+  console.log('🔐 req.isAuthenticated():', req.isAuthenticated());
+  next();
+});
+
 passport.serializeUser((user, done) => {
   console.log('Serializando usuario:', user._id);
   done(null, user._id);

@@ -55,6 +55,12 @@ const cleanRut = (rut) => {
 
 // 1. Registrar un atraso (la hora se asigna automáticamente)
 router.post('/', ensureAuthenticated, async (req, res) => {
+  console.log('\n=== INTENTANDO REGISTRAR ATRASO ===');
+  console.log('Usuario autenticado:', req.user);
+  console.log('Session ID:', req.sessionID);
+  console.log('req.isAuthenticated():', req.isAuthenticated());
+  console.log('Body recibido:', req.body);
+  
   try {
     const { motivo, rut, curso } = req.body;
     
