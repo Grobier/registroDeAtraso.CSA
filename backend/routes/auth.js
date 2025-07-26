@@ -42,6 +42,9 @@ router.post('/login', (req, res, next) => {
       console.log('Cookies después del login:', req.cookies);
       console.log('Headers de respuesta:', res.getHeaders());
       
+      // Forzar el establecimiento de la cookie de sesión
+      res.setHeader('Set-Cookie', `connect.sid=${req.sessionID}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+      
       // Aquí la sesión está establecida y Passport serializó el usuario
       res.json({
         message: 'Login exitoso',

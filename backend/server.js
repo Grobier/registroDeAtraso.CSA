@@ -66,8 +66,8 @@ app.use(session({
     collectionName: 'sessions'
   }),
   cookie: {
-    sameSite: isProduction ? 'none' : 'lax',
-    secure: isProduction,
+    sameSite: 'lax', // Cambiado temporalmente para debugging
+    secure: false, // Cambiado temporalmente para debugging
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 horas
   }
