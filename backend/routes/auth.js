@@ -40,6 +40,7 @@ router.post('/login', (req, res, next) => {
       console.log('req.user después del login:', req.user);
       console.log('req.isAuthenticated():', req.isAuthenticated());
       console.log('Cookies después del login:', req.cookies);
+      console.log('Headers de respuesta:', res.getHeaders());
       
       // Aquí la sesión está establecida y Passport serializó el usuario
       res.json({
