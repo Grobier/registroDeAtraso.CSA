@@ -41,9 +41,6 @@ router.post('/login', (req, res, next) => {
       console.log('req.isAuthenticated():', req.isAuthenticated());
       console.log('Cookies después del login:', req.cookies);
       
-      // Establecer headers de respuesta para debugging
-      res.setHeader('Set-Cookie', `sessionId=${req.sessionID}; Path=/; HttpOnly; SameSite=None; Secure`);
-      
       // Aquí la sesión está establecida y Passport serializó el usuario
       res.json({
         message: 'Login exitoso',

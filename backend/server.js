@@ -82,13 +82,17 @@ passport.serializeUser((user, done) => {
 });
 
 passport.deserializeUser(async (id, done) => {
+  console.log('\n🔄 DESERIALIZE USER LLAMADO');
+  console.log('🟨 ID recibido para deserializar:', id);
+  console.log('🟨 Tipo de ID:', typeof id);
   try {
-    console.log('🟨 ID recibido para deserializar:', id);
     const user = await User.findById(id);
     if (!user) {
       console.log('🟥 Usuario NO encontrado en la base de datos');
+      console.log('🟥 ID buscado:', id);
     } else {
       console.log('🟩 Usuario deserializado correctamente:', user.username);
+      console.log('🟩 Usuario completo:', user);
     }
     done(null, user);
   } catch (err) {
@@ -120,8 +124,10 @@ app.use((req, res, next) => {
     'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
   });
   console.log('🍪 Cookies recibidas:', req.cookies);
+  console.log('🍪 Cookie header completo:', req.headers.cookie);
   console.log('👤 req.user:', req.user ? req.user.username : 'undefined');
   console.log('🔐 req.isAuthenticated():', req.isAuthenticated());
+  console.log('🆔 Session ID:', req.sessionID);
   next();
 });
 
