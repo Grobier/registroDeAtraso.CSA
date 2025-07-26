@@ -7,6 +7,7 @@ const morgan = require('morgan');
 const passport = require('passport');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+const cookieParser = require('cookie-parser');
 const createOrUpdateAdmin = require('./createAdminIfNotExists');
 const User = require('./models/User');
 const LocalStrategy = require('passport-local').Strategy;
@@ -27,6 +28,9 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 // Middleware JSON
 app.use(express.json());
+
+// Middleware para parsear cookies
+app.use(cookieParser());
 
 // Middleware para verificar cookies antes de CORS
 app.use((req, res, next) => {
@@ -62,7 +66,7 @@ app.use(session({
     collectionName: 'sessions'
   }),
   cookie: {
-    sameSite: isProduction ? 'none' : 'lax',
+    sameSite: 'lax', // Cambiado temporalmente para debugging
     secure: isProduction,
     httpOnly: true
   }
