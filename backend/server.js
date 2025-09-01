@@ -21,7 +21,7 @@ console.log("Hora actual:", new Date().toLocaleString());
 
 const app = express();
 // Forzar desarrollo local para evitar problemas de CORS
-const isProduction = false; // process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === 'production';
 console.log('🔧 CORS Config - isProduction:', isProduction, '| NODE_ENV:', process.env.NODE_ENV);
 console.log('🔧 CORS Config - Origin permitido:', isProduction 
   ? 'https://registrodeatraso-csa.onrender.com'
