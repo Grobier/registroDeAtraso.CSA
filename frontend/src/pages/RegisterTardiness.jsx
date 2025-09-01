@@ -123,6 +123,30 @@ const RegisterTardiness = () => {
       return;
     }
 
+    // Si no trajo certificado, mostrar confirmación
+    if (requiresCertificate && !formData.trajoCertificado) {
+      Swal.fire({
+        title: 'Confirmar Registro Sin Certificado',
+        text: 'El estudiante será registrado como "atrasado" y NO contará como presente. ¿Desea continuar?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Sí, registrar sin certificado',
+        cancelButtonText: 'Cancelar y adjuntar certificado'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          procederConRegistro();
+        }
+      });
+      return;
+    }
+
+    // Si trajo certificado o no requiere certificado, proceder directamente
+    procederConRegistro();
+  };
+
+  const procederConRegistro = () => {
     Swal.fire({
       title: '¿Está seguro que quiere registrar el atraso?',
       icon: 'warning',
@@ -306,7 +330,17 @@ const RegisterTardiness = () => {
                 onChange={handleChange}
                 label="El estudiante trajo certificado médico"
                 className="mb-2"
-                required={requiresCertificate}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Check
+                type="checkbox"
+                name="noTrajoCertificado"
+                checked={!formData.trajoCertificado}
+                onChange={(e) => setFormData({ ...formData, trajoCertificado: !e.target.checked, certificadoAdjunto: null })}
+                label="El estudiante NO trajo certificado médico"
+                className="mb-2"
               />
             </Form.Group>
 
@@ -319,7 +353,6 @@ const RegisterTardiness = () => {
                   onChange={handleChange}
                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                   className="input-modern"
-                  required={requiresCertificate}
                 />
                 <Form.Text className="text-muted">
                   Formatos aceptados: PDF, JPG, PNG, DOC, DOCX. Máximo 5MB.
