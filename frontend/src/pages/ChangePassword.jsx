@@ -3,7 +3,7 @@ import { Container, Form, Button, Alert, Card, Row, Col } from 'react-bootstrap'
 import axios from 'axios';
 import './Login.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:5000');
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
 
 function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState('');

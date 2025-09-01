@@ -37,12 +37,171 @@ body.dark-mode {
   background-color: #f8f9fa;
   min-height: calc(100vh - 56px);
   transition: background-color 0.3s ease;
+  margin-left: 72px; /* Compensar el sidebar */
+}
+
+/* Layout de gráficos - Evitar superposición */
+.chart-card {
+  height: 100%;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease-out;
+  margin-bottom: 2rem; /* Espacio entre gráficos */
+}
+
+.chart-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.chart-title {
+  color: #202124;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+/* Grid de gráficos */
+.stats-container {
+  margin-top: 2rem;
+}
+
+.stats-item {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  height: 100%;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  animation: fadeIn 0.5s ease-out;
+  cursor: pointer;
+  margin-bottom: 1rem; /* Espacio entre elementos */
+}
+
+.stats-item:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Responsive para gráficos */
+@media (max-width: 768px) {
+  .dashboard-container {
+    padding: 1rem;
+    margin-left: 0; /* En móvil no hay sidebar */
+  }
+  
+  .chart-card {
+    margin-bottom: 1rem;
+  }
+  
+  .stats-item {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Reglas específicas para evitar superposición de gráficos */
+.recharts-wrapper {
+  overflow: visible !important;
+  z-index: 1 !important;
+  position: relative !important;
+}
+
+.recharts-surface {
+  overflow: visible !important;
+}
+
+.recharts-legend-wrapper {
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.recharts-tooltip-wrapper {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+/* Asegurar que los contenedores de gráficos no se superpongan */
+.chart-container {
+  position: relative !important;
+  overflow: visible !important;
+  margin-bottom: 2rem !important;
+}
+
+/* Grid system para gráficos */
+.row > .col,
+.row > [class*="col-"] {
+  margin-bottom: 2rem !important;
+}
+
+/* Espaciado específico entre gráficos */
+.chart-card + .chart-card {
+  margin-top: 2rem !important;
 }
 
 /* Modo Oscuro */
 .dark-mode {
   background-color: #1a1a1a;
   color: #ffffff;
+}
+
+/* Botón de toggle de tema */
+.theme-toggle-btn {
+  border-radius: 25px;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: none;
+}
+
+.theme-toggle-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark-mode .theme-toggle-btn {
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+}
+
+/* Estilos adicionales para modo oscuro */
+.dark-mode .dashboard-container {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+.dark-mode .chart-card {
+  background-color: #2d2d2d;
+  border-color: #404040;
+  color: #ffffff;
+}
+
+.dark-mode .chart-title {
+  color: #ffffff;
+}
+
+.dark-mode .stats-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .stats-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark-mode .stats-content h3 {
+  color: #ffffff;
+}
+
+.dark-mode .stats-content p {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark-mode .stats-trend {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .dark-mode .dashboard-header {
@@ -580,32 +739,75 @@ body.dark-mode {
 }
 
 .sidebar-navbar {
-  position: fixed;
-  top: 60px;
-  left: 0;
-  height: calc(100vh - 60px);
-  width: 72px;
-  min-width: unset;
-  background: rgba(26, 115, 232, 0.92);
-  box-shadow: 2px 0 16px rgba(26, 115, 232, 0.10);
-  border-top-left-radius: 1.2rem;
-  border-bottom-left-radius: 1.2rem;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  margin: 0;
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  z-index: 300;
-  transition: width 0.25s cubic-bezier(.4,2,.6,1), background 0.3s;
-  overflow-x: visible;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 1.2rem;
-  padding-bottom: 1.2rem;
+  position: fixed !important;
+  top: 60px !important;
+  left: 0 !important;
+  height: calc(100vh - 60px) !important;
+  width: 72px !important;
+  min-width: unset !important;
+  background: rgba(26, 115, 232, 0.92) !important;
+  box-shadow: 2px 0 16px rgba(26, 115, 232, 0.10) !important;
+  border-top-left-radius: 1.2rem !important;
+  border-bottom-left-radius: 1.2rem !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  z-index: 1500 !important;
+  transition: width 0.3s ease, min-width 0.3s ease, background 0.3s, transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease !important;
+  overflow-x: visible !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding-top: 1.2rem !important;
+  padding-bottom: 1.2rem !important;
 }
+
+/* Ocultar sidebar cuando hay modal abierto */
+.sidebar-navbar.modal-open {
+  transform: translateX(-100%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  left: -100% !important;
+  position: absolute !important;
+}
+
+/* Asegurar que el sidebar esté pegado al borde izquierdo */
+.sidebar-navbar {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+}
+
+/* Reset de cualquier contenedor padre que pueda afectar la posición */
+.sidebar-navbar * {
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* Asegurar que el body y html no tengan márgenes que afecten el sidebar */
+body, html {
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Compensar el topbar fijo */
+body {
+  padding-top: 60px !important;
+}
+
+
 .sidebar-navbar:not(.collapsed) {
-  width: 220px;
+  width: 220px !important;
+  min-width: 220px !important;
 }
 .sidebar-navbar .nav-link-custom, .sidebar-navbar .btn-gestionar-usuarios {
   font-size: 0.98rem;
@@ -668,16 +870,28 @@ body.dark-mode {
 }
 @media (max-width: 900px) {
   .sidebar-navbar {
-    position: fixed;
-    left: 0;
-    top: 60px;
-    height: calc(100vh - 60px);
-    width: 200px;
-    border-radius: 0;
-    margin: 0;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    z-index: 3000;
+    position: fixed !important;
+    left: 0 !important;
+    top: 60px !important;
+    height: calc(100vh - 60px) !important;
+    width: 200px !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    z-index: 1500 !important;
+    transition: transform 0.3s ease, opacity 0.3s ease, visibility 0.3s ease !important;
+  }
+  
+  /* Ocultar sidebar cuando hay modal abierto */
+  .sidebar-navbar.modal-open {
+    transform: translateX(-100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+    left: -100% !important;
+    position: absolute !important;
   }
   .sidebar-navbar .nav {
     flex-direction: row !important;
@@ -706,14 +920,16 @@ body.dark-mode {
 }
 
 .session-topbar {
-  background: rgba(255,255,255,0.82);
+  background: rgba(255,255,255,0.95);
   min-height: 60px;
   width: 100vw;
-  box-shadow: 0 2px 16px rgba(26, 115, 232, 0.10);
-  position: relative;
-  z-index: 200;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 2px 16px rgba(26, 115, 232, 0.15);
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 2000 !important;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   border-bottom-left-radius: 1.2rem;
   border-bottom-right-radius: 1.2rem;
   transition: background 0.3s, box-shadow 0.3s;
@@ -746,4 +962,67 @@ body.dark-mode {
   font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
   letter-spacing: 0.01em;
 }
+
+/* Estilos para centrar mejor los modales */
+.modal-dialog-centered {
+  display: flex;
+  align-items: center;
+  min-height: calc(100vh - 3.5rem);
+}
+
+.modal.show .modal-dialog {
+  margin: 1.75rem auto;
+  transform: none !important;
+}
+
+/* Modal de gestión de usuarios específicamente */
+.modal.show[data-bs-target*="user"] .modal-dialog {
+  margin: 2rem auto;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Modal de nuevo estudiante específicamente */
+.modal.show .modal-dialog {
+  margin: 2rem auto;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Asegurar que todos los modales estén bien centrados */
+.modal-content {
+  border-radius: 1rem;
+  border: none;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+
+
+/* Alertas informativas */
+.alert-info {
+  background: linear-gradient(135deg, #d1ecf1 0%, #bee5eb 100%);
+  border: 1px solid #bee5eb;
+  color: #0c5460;
+  border-radius: 0.75rem;
+}
+
+.alert-info i {
+  color: #17a2b8;
+}
+
+.modal-header {
+  border-bottom: 1px solid #dee2e6;
+  padding: 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid #dee2e6;
+  padding: 1.5rem;
+}
+
+
 

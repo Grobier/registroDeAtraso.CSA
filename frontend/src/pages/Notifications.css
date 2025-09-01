@@ -1,0 +1,154 @@
+/* Estilos específicos para la página de Notifications */
+
+/* Centrado perfecto de la modal */
+.modal-dialog-centered {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 1rem !important;
+}
+
+/* Asegurar que la modal esté centrada tanto vertical como horizontalmente */
+.modal.show .modal-dialog {
+  margin: 0 auto !important;
+  transform: none !important;
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+}
+
+/* Forzar el centrado vertical */
+.modal.show .modal-dialog-centered {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+}
+
+/* Estilos específicos para la modal de conceptos de atrasos */
+.modal-xl .modal-dialog {
+  max-width: 90vw !important;
+  width: 90vw !important;
+  margin: 0 auto !important;
+}
+
+/* Asegurar que el contenido de la modal esté bien espaciado */
+.modal-content {
+  border-radius: 1rem;
+  border: none;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Estilos para el header de la modal */
+.modal-header {
+  border-bottom: 2px solid #e9ecef;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+
+/* Estilos para el body de la modal */
+.modal-body {
+  padding: 2rem;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Estilos para el footer de la modal */
+.modal-footer {
+  border-top: 2px solid #e9ecef;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom-left-radius: 1rem;
+  border-bottom-right-radius: 1rem;
+}
+
+/* Responsive para pantallas pequeñas */
+@media (max-width: 768px) {
+  .modal-xl .modal-dialog {
+    max-width: 95vw !important;
+    width: 95vw !important;
+    margin: 0.5rem auto !important;
+  }
+  
+  .modal-content {
+    max-height: 95vh;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+    max-height: 75vh;
+  }
+}
+
+/* Asegurar que la modal esté por encima de todos los elementos */
+.modal {
+  z-index: 2000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.modal-backdrop {
+  z-index: 1999 !important;
+}
+
+/* Estilos adicionales para garantizar el centrado */
+.modal-dialog {
+  margin: auto !important;
+  max-height: 90vh !important;
+}
+
+/* Override de Bootstrap para asegurar centrado */
+.modal.show .modal-dialog-centered {
+  transform: none !important;
+  margin: auto !important;
+}
+
+/* Asegurar que la modal esté centrada en dispositivos móviles */
+@media (max-width: 576px) {
+  .modal-dialog-centered {
+    margin: 0.5rem auto !important;
+    min-height: calc(100vh - 1rem) !important;
+  }
+}
+
+/* Estilos para los botones de descarga PDF */
+.btn-pdf {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
+}
+
+.btn-pdf:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
+}
+
+/* Botones flotantes de acción */
+.position-fixed .btn {
+  transition: all 0.3s ease;
+}
+
+.position-fixed .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive para botones flotantes */
+@media (max-width: 768px) {
+  .position-fixed {
+    bottom: 20px !important;
+    right: 20px !important;
+  }
+  
+  .position-fixed .btn {
+    padding: 12px 20px !important;
+    font-size: 1rem !important;
+  }
+}

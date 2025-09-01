@@ -1,0 +1,52 @@
+/* Estilos específicos para el navbar */
+.navbar-brand {
+  text-decoration: none !important;
+  color: #fff !important;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer !important;
+  user-select: none;
+}
+
+.navbar-brand:hover {
+  text-decoration: none !important;
+  color: #fff !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  transform: scale(1.02) !important;
+}
+
+.navbar-brand:focus {
+  text-decoration: none !important;
+  color: #fff !important;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.25) !important;
+}
+
+.navbar-brand img {
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: transform 0.2s ease-in-out;
+}
+
+.navbar-brand span {
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: color 0.2s ease-in-out;
+}
+
+/* Estilos para el hover del logo */
+.navbar-brand:hover img {
+  transform: scale(1.05) !important;
+}
+
+/* Estilos para el hover del texto */
+.navbar-brand:hover span {
+  color: #17a2b8 !important;
+}
+
+/* Asegurar que el área sea clickeable */
+.navbar-brand * {
+  pointer-events: none !important;
+}
+
+.navbar-brand {
+  pointer-events: auto !important;
+}

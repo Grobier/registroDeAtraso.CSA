@@ -10,6 +10,31 @@ const passport = require('passport');
 // Middleware para verificar autenticación
 const { ensureAuthenticated } = require('../middlewares/auth');
 
+// Ruta para verificar estado de autenticación
+router.get('/check-auth', (req, res) => {
+  console.log('\n=== VERIFICANDO AUTENTICACIÓN ===');
+  console.log('Session ID:', req.sessionID);
+  console.log('req.isAuthenticated():', req.isAuthenticated());
+  console.log('req.user:', req.user);
+  console.log('Cookies:', req.cookies);
+  
+  if (req.isAuthenticated()) {
+    res.json({
+      authenticated: true,
+      user: {
+        username: req.user.username,
+        role: req.user.role,
+        email: req.user.email
+      }
+    });
+  } else {
+    res.status(401).json({
+      authenticated: false,
+      message: 'Usuario no autenticado'
+    });
+  }
+});
+
 // Login con manejo manual de sesión
 router.post('/login', (req, res, next) => {
   console.log('\n=== INTENTANDO LOGIN ===');

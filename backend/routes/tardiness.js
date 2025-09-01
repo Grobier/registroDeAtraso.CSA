@@ -1,6 +1,9 @@
 // routes/tardiness.js
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const Tardiness = require('../models/Tardiness');
 const Student = require('../models/Student');
 const nodemailer = require('nodemailer');
@@ -8,6 +11,42 @@ const moment = require('moment-timezone');
 const ActivityLog = require('../models/ActivityLog');
 require('dotenv').config();
 const { ensureAuthenticated } = require('../middlewares/auth');
+
+// Configuración de Multer para subida de archivos
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = path.join(__dirname, '../uploads/certificados');
+    // Crear directorio si no existe
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Generar nombre único: timestamp + nombre original
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  // Permitir solo ciertos tipos de archivo
+  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+  
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Tipo de archivo no permitido. Solo se permiten PDF, JPG, PNG, DOC y DOCX.'), false);
+  }
+};
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB máximo
+  }
+});
 
 // Configuración de Nodemailer con debug y logger activados
 const transporter = nodemailer.createTransport({
@@ -54,7 +93,7 @@ const cleanRut = (rut) => {
 };
 
 // 1. Registrar un atraso (la hora se asigna automáticamente)
-router.post('/', ensureAuthenticated, async (req, res) => {
+router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async (req, res) => {
   console.log('\n=== INTENTANDO REGISTRAR ATRASO ===');
   console.log('Usuario autenticado:', req.user);
   console.log('Session ID:', req.sessionID);
@@ -62,7 +101,8 @@ router.post('/', ensureAuthenticated, async (req, res) => {
   console.log('Body recibido:', req.body);
   
   try {
-    const { motivo, rut, curso } = req.body;
+    const { motivo, rut, curso, trajoCertificado } = req.body;
+    const certificadoAdjunto = req.file ? req.file.filename : null;
     
     // Limpiamos el RUT completamente
     const searchRut = cleanRut(rut);
@@ -78,14 +118,52 @@ router.post('/', ensureAuthenticated, async (req, res) => {
     }
 
     // Asignar la hora actual del servidor con la zona horaria correcta
-    const currentTime = moment().tz('America/Santiago').format('HH:mm'); // Cambia 'America/Santiago' por tu zona horaria
+    const currentTime = moment().tz('America/Santiago').format('HH:mm');
+    const currentHour = moment().tz('America/Santiago').hour();
+    const currentMinute = moment().tz('America/Santiago').minute();
+    
+         // Lógica para determinar concepto y si requiere certificado
+     let concepto = 'presente';
+     let requiereCertificado = false;
+     
+     // Si llega antes o a las 9:30 (9 horas y 30 minutos = 9*60 + 30 = 570 minutos)
+     const minutosDesdeMedianoche = currentHour * 60 + currentMinute;
+     const limiteMinutos = 9 * 60 + 30; // 9:30 AM
+     
+     if (minutosDesdeMedianoche <= limiteMinutos) {
+       // Hasta 9:30 AM → presente (con o sin certificado)
+       concepto = 'presente';
+       requiereCertificado = false;
+     } else {
+       // Después de 9:30 AM
+       if (trajoCertificado) {
+         // Con certificado → atrasado-presente
+         concepto = 'atrasado-presente';
+         requiereCertificado = true;
+       } else {
+         // Sin certificado → ausente
+         concepto = 'ausente';
+         requiereCertificado = true;
+       }
+       
+       // Validar que si es después de 9:30 AM, debe traer certificado
+       if (!trajoCertificado) {
+         return res.status(400).json({ 
+           error: "Después de las 9:30 AM es obligatorio presentar certificado médico para justificar el atraso." 
+         });
+       }
+     }
 
-    // Guardar el registro de atraso en Tardiness usando el rut recibido (ya como string)
+    // Guardar el registro de atraso en Tardiness
     const newTardiness = new Tardiness({ 
       hora: currentTime,
       motivo,
-      studentRut: searchRut,  // Guardamos el rut limpio
-      curso
+      studentRut: searchRut,
+      curso,
+      trajoCertificado: trajoCertificado || false,
+      certificadoAdjunto: certificadoAdjunto || null,
+      concepto,
+      requiereCertificado
     });
     await newTardiness.save();
     console.log("Registro de atraso guardado:", newTardiness);
@@ -95,7 +173,7 @@ router.post('/', ensureAuthenticated, async (req, res) => {
     await ActivityLog.create({
       user: performedBy,
       action: 'Registrar atraso',
-      details: `Atraso registrado para RUT: ${rut}, curso: ${curso}`
+      details: `Atraso registrado para RUT: ${rut}, curso: ${curso}, concepto: ${concepto}, certificado: ${trajoCertificado ? 'Sí' : 'No'}`
     });
 
     // Log 2: Buscar todos los estudiantes para verificar
@@ -171,9 +249,33 @@ Equipo directivo.`
       }
     }
 
-    res.status(201).json({ message: "Atraso registrado y correo enviado" });
+    res.status(201).json({ 
+      message: `Atraso registrado como ${concepto} y correo enviado`,
+      concepto,
+      requiereCertificado,
+      trajoCertificado
+    });
   } catch (error) {
     console.error("Error completo:", error);
+    
+    // Si hay un archivo subido y hay error, eliminarlo
+    if (req.file) {
+      try {
+        fs.unlinkSync(req.file.path);
+        console.log("Archivo eliminado debido al error:", req.file.path);
+      } catch (unlinkError) {
+        console.error("Error al eliminar archivo:", unlinkError);
+      }
+    }
+    
+    // Manejar errores específicos de multer
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: "El archivo es demasiado grande. Máximo 5MB." });
+      }
+      return res.status(400).json({ error: "Error en la subida del archivo: " + error.message });
+    }
+    
     res.status(500).json({ error: "Error en el servidor" });
   }
 });
@@ -285,6 +387,25 @@ router.get('/', async (req, res) => {
   } catch (error) {
     console.error("Error al obtener atrasos:", error);
     res.status(500).json({ error: "Error en el servidor" });
+  }
+});
+
+// 5. Descargar certificado médico
+router.get('/certificado/:filename', ensureAuthenticated, (req, res) => {
+  try {
+    const filename = req.params.filename;
+    const filePath = path.join(__dirname, '../uploads/certificados', filename);
+    
+    // Verificar que el archivo existe
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "Archivo no encontrado" });
+    }
+    
+    // Enviar el archivo
+    res.download(filePath);
+  } catch (error) {
+    console.error("Error al descargar certificado:", error);
+    res.status(500).json({ error: "Error al descargar el archivo" });
   }
 });
 

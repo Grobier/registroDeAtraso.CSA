@@ -20,8 +20,13 @@ console.log("Zona horaria configurada:", process.env.TZ);
 console.log("Hora actual:", new Date().toLocaleString());
 
 const app = express();
-const isProduction = process.env.NODE_ENV === 'production';
-console.log('isProduction:', isProduction, '| NODE_ENV:', process.env.NODE_ENV);
+// Forzar desarrollo local para evitar problemas de CORS
+const isProduction = false; // process.env.NODE_ENV === 'production';
+console.log('🔧 CORS Config - isProduction:', isProduction, '| NODE_ENV:', process.env.NODE_ENV);
+console.log('🔧 CORS Config - Origin permitido:', isProduction 
+  ? 'https://registrodeatraso-csa.onrender.com'
+  : ['http://localhost:5173', 'http://localhost:3000']
+);
 
 // Servir archivos estáticos del frontend (SPA)
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -40,18 +45,14 @@ app.use((req, res, next) => {
   next();
 });
 
-const allowedOrigins = isProduction
-  ? ['https://registrodeatraso-csa.onrender.com']
-  : ['http://localhost:5173'];
-
+// Configuración de CORS simplificada
 app.use(cors({
-  origin: allowedOrigins[0],
-  credentials: true
-}));
-
-app.options('*', cors({
-  origin: allowedOrigins[0],
-  credentials: true
+  origin: isProduction 
+    ? 'https://registrodeatraso-csa.onrender.com'
+    : ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
 app.use(morgan('dev'));
@@ -142,11 +143,13 @@ const studentsRoutes = require('./routes/students');
 const authRoutes = require('./routes/auth');
 const tardinessRoutes = require('./routes/tardiness');
 const activityLogRoutes = require('./routes/activityLog');
+const notificationsRoutes = require('./routes/notifications');
 
 app.use('/api/students', studentsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tardiness', tardinessRoutes);
 app.use('/api/activity-log', activityLogRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // SPA: redirigir todo a index.html (excepto /api)
 app.get('*', (req, res) => {

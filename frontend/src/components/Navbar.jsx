@@ -2,6 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar, Nav, Container, Button, Modal, Table, Form } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
+import NotificationsModal from './NotificationsModal';
+import axios from 'axios';
+import './Navbar.css';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
 
 const NavigationBar = () => {
   const navigate = useNavigate();
@@ -13,6 +18,12 @@ const NavigationBar = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  
+  // Log cuando cambia el estado del modal
+  useEffect(() => {
+    console.log('🔄 showNotificationsModal cambió a:', showNotificationsModal);
+  }, [showNotificationsModal]);
   const [editForm, setEditForm] = useState({ username: '', email: '', role: '' });
   const [newPassword, setNewPassword] = useState('');
   const [actionMsg, setActionMsg] = useState('');
@@ -21,10 +32,9 @@ const NavigationBar = () => {
   useEffect(() => {
     if (showUserModal) {
       setLoadingUsers(true);
-      fetch('/api/auth/users', { credentials: 'include' })
-        .then(res => res.json())
-        .then(data => {
-          setUsers(data);
+      axios.get(`${API_BASE_URL}/api/auth/users`, { withCredentials: true })
+        .then(response => {
+          setUsers(response.data);
           setLoadingUsers(false);
         })
         .catch(() => setLoadingUsers(false));
@@ -41,18 +51,12 @@ const NavigationBar = () => {
   // Guardar cambios de usuario
   const handleSaveEdit = async () => {
     setActionMsg('');
-    const res = await fetch(`/api/auth/users/${selectedUser._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(editForm)
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setUsers(users.map(u => u._id === selectedUser._id ? data.user : u));
+    try {
+      const response = await axios.put(`${API_BASE_URL}/api/auth/users/${selectedUser._id}`, editForm, { withCredentials: true });
+      setUsers(users.map(u => u._id === selectedUser._id ? response.data.user : u));
       setShowEditModal(false);
-    } else {
-      setActionMsg(data.message || 'Error al editar usuario');
+    } catch (error) {
+      setActionMsg(error.response?.data?.message || 'Error al editar usuario');
     }
   };
 
@@ -60,13 +64,10 @@ const NavigationBar = () => {
   const handleDelete = async (user) => {
     if (!window.confirm('¿Seguro que deseas eliminar este usuario?')) return;
     setActionMsg('');
-    const res = await fetch(`/api/auth/users/${user._id}`, {
-      method: 'DELETE',
-      credentials: 'include'
-    });
-    if (res.ok) {
+    try {
+      await axios.delete(`${API_BASE_URL}/api/auth/users/${user._id}`, { withCredentials: true });
       setUsers(users.filter(u => u._id !== user._id));
-    } else {
+    } catch (error) {
       setActionMsg('Error al eliminar usuario');
     }
   };
@@ -81,17 +82,11 @@ const NavigationBar = () => {
   // Guardar nueva contraseña
   const handleSavePassword = async () => {
     setActionMsg('');
-    const res = await fetch(`/api/auth/users/${selectedUser._id}/reset-password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ newPassword })
-    });
-    const data = await res.json();
-    if (res.ok) {
+    try {
+      await axios.post(`${API_BASE_URL}/api/auth/users/${selectedUser._id}/reset-password`, { newPassword }, { withCredentials: true });
       setShowPasswordModal(false);
-    } else {
-      setActionMsg(data.message || 'Error al resetear contraseña');
+    } catch (error) {
+      setActionMsg(error.response?.data?.message || 'Error al resetear contraseña');
     }
   };
 
@@ -104,7 +99,50 @@ const NavigationBar = () => {
   return (
     <Navbar bg="dark" variant="dark" expand="lg">
       <Container>
-        <Navbar.Brand as={Link} to="/">AtrasosApp</Navbar.Brand>
+        <div 
+          className="navbar-brand d-flex align-items-center"
+          style={{
+            cursor: 'pointer',
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            transition: 'all 0.2s ease-in-out'
+          }}
+          onClick={() => {
+            console.log('🎯 Logo/Texto clickeado! Navegando al Dashboard...');
+            navigate('/dashboard');
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.backgroundColor = 'rgba(255,255,255,0.1)';
+            e.target.style.transform = 'scale(1.02)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.backgroundColor = 'transparent';
+            e.target.style.transform = 'scale(1)';
+          }}
+        >
+          <img 
+            src="/Logo.png" 
+            alt="Logo AtrasosApp" 
+            height="40" 
+            className="me-2"
+            style={{ 
+              borderRadius: '8px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+              transition: 'transform 0.2s ease-in-out'
+            }}
+          />
+          <span 
+            style={{ 
+              fontWeight: 'bold',
+              fontSize: '1.4rem',
+              color: '#fff',
+              textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+              transition: 'color 0.2s ease-in-out'
+            }}
+          >
+            AtrasosApp
+          </span>
+        </div>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
@@ -119,6 +157,17 @@ const NavigationBar = () => {
             {role === 'admin' && (
               <Button variant="outline-info" className="ms-2" onClick={() => setShowUserModal(true)}>
                 Gestionar Usuarios
+              </Button>
+            )}
+            {(role === 'admin' || role === 'registrador') && (
+              <Button variant="outline-warning" className="ms-2" onClick={() => {
+                alert('🔘 Botón Notificaciones clickeado!');
+                console.log('🔘 Botón Notificaciones clickeado');
+                console.log('📊 Estado actual showNotificationsModal:', showNotificationsModal);
+                setShowNotificationsModal(true);
+                console.log('✅ showNotificationsModal establecido en true');
+              }}>
+                📧 Notificaciones
               </Button>
             )}
           </Nav>
@@ -224,6 +273,14 @@ const NavigationBar = () => {
           <Button variant="primary" onClick={handleSavePassword}>Guardar</Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Modal de Notificaciones */}
+      {console.log('🎭 Renderizando NotificationsModal en Navbar, show:', showNotificationsModal)}
+      {showNotificationsModal && <div style={{color: 'red', fontSize: '20px'}}>🔴 MODAL DEBERÍA ESTAR ABIERTO</div>}
+      <NotificationsModal 
+        show={showNotificationsModal} 
+        onHide={() => setShowNotificationsModal(false)} 
+      />
     </Navbar>
   );
 };
