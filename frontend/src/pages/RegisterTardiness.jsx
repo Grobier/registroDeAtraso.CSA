@@ -1,9 +1,11 @@
 // src/pages/RegisterTardiness.jsx
 import React, { useState, useEffect } from 'react';
-import { Container, Form, Button, Alert, Card, Row, Col } from 'react-bootstrap';
+import { Container, Form, Button, Alert, Card, Row, Col, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { FaPlusCircle } from 'react-icons/fa';
+import { FaPlusCircle, FaWifi, FaClock, FaExclamationTriangle } from 'react-icons/fa';
+import useOnlineStatus from '../hooks/useOnlineStatus';
+import ManualRegistrationModal from '../components/ManualRegistrationModal';
 import './RegisterTardiness.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
@@ -22,6 +24,12 @@ const RegisterTardiness = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [requiresCertificate, setRequiresCertificate] = useState(false);
+  
+  // Estados para registro manual
+  const [showManualModal, setShowManualModal] = useState(false);
+  
+  // Hooks personalizados
+  const { isOnline } = useOnlineStatus();
 
   // Obtener la lista de cursos
   useEffect(() => {
@@ -87,6 +95,8 @@ const RegisterTardiness = () => {
     return () => clearInterval(timer);
   }, []);
 
+
+
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
     
@@ -99,31 +109,39 @@ const RegisterTardiness = () => {
     }
   };
 
+  // Función para registro manual (solo mostrar modal)
+  const handleManualSave = (tardinessData) => {
+    Swal.fire({
+      title: 'Registro Manual Completado',
+      text: 'Los datos han sido registrados manualmente. Recuerde sincronizar cuando vuelva la conexión.',
+      icon: 'info',
+      timer: 3000
+    });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validar que si requiere certificado, debe estar marcado y adjuntado
-    if (requiresCertificate && !formData.trajoCertificado) {
+    // Verificar conexión a internet
+    if (!isOnline) {
       Swal.fire({
-        title: 'Certificado Médico Requerido',
-        text: 'Después de las 9:30 AM es obligatorio presentar certificado médico para justificar el atraso.',
+        title: 'Sin Conexión a Internet',
+        text: 'No hay conexión a internet. ¿Desea registrar el atraso manualmente para sincronizarlo después?',
         icon: 'warning',
-        confirmButtonText: 'Entendido'
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Sí, registro manual',
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setShowManualModal(true);
+        }
       });
       return;
     }
 
-    if (requiresCertificate && formData.trajoCertificado && !formData.certificadoAdjunto) {
-      Swal.fire({
-        title: 'Archivo Requerido',
-        text: 'Debe adjuntar el archivo del certificado médico.',
-        icon: 'warning',
-        confirmButtonText: 'Entendido'
-      });
-      return;
-    }
-
-    // Si no trajo certificado, mostrar confirmación
+    // Si no trajo certificado y requiere certificado, mostrar confirmación especial
     if (requiresCertificate && !formData.trajoCertificado) {
       Swal.fire({
         title: 'Confirmar Registro Sin Certificado',
@@ -142,7 +160,18 @@ const RegisterTardiness = () => {
       return;
     }
 
-    // Si trajo certificado o no requiere certificado, proceder directamente
+    // Si trajo certificado pero no adjuntó archivo
+    if (requiresCertificate && formData.trajoCertificado && !formData.certificadoAdjunto) {
+      Swal.fire({
+        title: 'Archivo Requerido',
+        text: 'Debe adjuntar el archivo del certificado médico.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      });
+      return;
+    }
+
+    // Si no requiere certificado o trajo certificado con archivo, proceder directamente
     procederConRegistro();
   };
 
@@ -257,15 +286,27 @@ const RegisterTardiness = () => {
           <FaPlusCircle size={38} color="#1a73e8" style={{ marginBottom: '-7px', marginRight: '8px' }} />
           <span className="register-tardiness-title">Registrar Atraso</span>
           
-          {/* Indicador de hora actual */}
+          {/* Indicadores de estado */}
           <div className="mt-3">
-            <div className={`badge ${requiresCertificate ? 'bg-warning' : 'bg-success'} fs-6`}>
-              <i className="fas fa-clock me-2"></i>
-              Hora actual: {currentTime.toLocaleTimeString('es-CL', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })}
-            </div>
+            <Row className="justify-content-center">
+              <Col md="auto">
+                <div className={`badge ${requiresCertificate ? 'bg-warning' : 'bg-success'} fs-6`}>
+                  <i className="fas fa-clock me-2"></i>
+                  Hora actual: {currentTime.toLocaleTimeString('es-CL', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </div>
+              </Col>
+              <Col md="auto">
+                <div className={`badge ${isOnline ? 'bg-success' : 'bg-danger'} fs-6`}>
+                  {isOnline ? <FaWifi className="me-2" /> : <FaExclamationTriangle className="me-2" />}
+                  {isOnline ? 'Conectado' : 'Sin conexión'}
+                </div>
+              </Col>
+
+            </Row>
+            
             <div className="mt-2">
               <small className={`text-${requiresCertificate ? 'warning' : 'success'}`}>
                 {requiresCertificate 
@@ -273,6 +314,24 @@ const RegisterTardiness = () => {
                   : '✅ Antes de las 9:30 AM - No se requiere certificado médico'
                 }
               </small>
+            </div>
+
+            {/* Botones de acción adicionales */}
+            <div className="mt-3">
+              <Row className="justify-content-center">
+                <Col md="auto">
+                  <Button 
+                    variant="outline-warning" 
+                    size="sm"
+                    onClick={() => setShowManualModal(true)}
+                    disabled={!isOnline && !selectedStudent}
+                  >
+                    <FaExclamationTriangle className="me-1" />
+                    Registro Manual
+                  </Button>
+                </Col>
+
+              </Row>
             </div>
           </div>
         </div>
@@ -388,6 +447,14 @@ const RegisterTardiness = () => {
           </div>
         </Form>
       </div>
+
+      {/* Modal de Registro Manual */}
+      <ManualRegistrationModal
+        show={showManualModal}
+        onHide={() => setShowManualModal(false)}
+        onSave={handleManualSave}
+        courses={courses}
+      />
     </div>
   );
 };
