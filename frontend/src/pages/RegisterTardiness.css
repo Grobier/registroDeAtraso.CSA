@@ -6,8 +6,8 @@
   border-radius: 1.5rem;
   box-shadow: 0 8px 32px rgba(26, 115, 232, 0.10), 0 1.5px 8px rgba(26, 115, 232, 0.08);
   padding: 2.5rem 2.2rem 2.2rem 2.2rem;
-  min-width: 340px;
-  max-width: 420px;
+  min-width: 500px;
+  max-width: 800px;
   width: 100%;
   animation: fadeInUp 0.7s cubic-bezier(.4,2,.6,1);
 }
@@ -48,6 +48,14 @@
   from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@media (max-width: 768px) {
+  .register-tardiness-card {
+    padding: 1.5rem 1rem;
+    min-width: unset;
+    max-width: 95vw;
+  }
+}
+
 @media (max-width: 600px) {
   .register-tardiness-card {
     padding: 1.2rem 0.5rem;

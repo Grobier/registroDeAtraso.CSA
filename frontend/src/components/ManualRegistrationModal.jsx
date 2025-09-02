@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Row, Col } from 'react-bootstrap';
 import { FaWifi, FaClock, FaUser, FaFileAlt, FaExclamationTriangle } from 'react-icons/fa';
+import axios from 'axios';
 
 const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
   const [formData, setFormData] = useState({
@@ -9,6 +10,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
     motivo: '',
     hora: '',
     trajoCertificado: false,
+    certificadoAdjunto: null,
     observaciones: ''
   });
   const [students, setStudents] = useState([]);
@@ -30,31 +32,47 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
       setLoadingStudents(true);
       setStudents([]);
       
-      // Simular carga de estudiantes (en un caso real, harías una llamada a la API)
-      // Por ahora, vamos a usar una lista de estudiantes de ejemplo
-      const estudiantesEjemplo = [
-        { _id: '1', nombres: 'Juan', apellidosPaterno: 'Pérez', apellidosMaterno: 'González', rut: '12345678-9', curso: formData.curso },
-        { _id: '2', nombres: 'María', apellidosPaterno: 'López', apellidosMaterno: 'Martínez', rut: '98765432-1', curso: formData.curso },
-        { _id: '3', nombres: 'Carlos', apellidosPaterno: 'García', apellidosMaterno: 'Rodríguez', rut: '11223344-5', curso: formData.curso },
-        { _id: '4', nombres: 'Ana', apellidosPaterno: 'Hernández', apellidosMaterno: 'Sánchez', rut: '55667788-9', curso: formData.curso },
-        { _id: '5', nombres: 'Luis', apellidosPaterno: 'Torres', apellidosMaterno: 'Flores', rut: '99887766-5', curso: formData.curso }
-      ];
+      // Hacer llamada real a la API para obtener estudiantes del curso
+      const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
       
-      setTimeout(() => {
-        setStudents(estudiantesEjemplo);
+      axios.get(`${API_BASE_URL}/api/students`, { 
+        params: { curso: formData.curso }, 
+        withCredentials: true 
+      })
+      .then(response => {
+        console.log('🔍 [DEBUG] Estudiantes recibidos para curso:', formData.curso, response.data);
+        setStudents(response.data);
         setLoadingStudents(false);
-      }, 500);
+      })
+      .catch(error => {
+        console.error('❌ [DEBUG] Error al obtener estudiantes:', error);
+        setStudents([]);
+        setLoadingStudents(false);
+      });
     } else {
       setStudents([]);
     }
   }, [formData.curso]);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    const { name, value, type, checked, files } = e.target;
+    
+    if (type === 'checkbox') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }));
+    } else if (type === 'file') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: files[0]
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = (e) => {
@@ -83,12 +101,13 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
       motivo: '',
       hora: '',
       trajoCertificado: false,
+      certificadoAdjunto: null,
       observaciones: ''
     });
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="lg" centered>
+    <Modal show={show} onHide={onHide} size="xl" centered>
       <Modal.Header closeButton className="bg-warning text-dark">
         <Modal.Title>
           <FaExclamationTriangle className="me-2" />
@@ -105,7 +124,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
 
         <Form onSubmit={handleSubmit}>
           <Row>
-            <Col md={6}>
+            <Col lg={4} md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>
                   <FaUser className="me-1" />
@@ -125,7 +144,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
               </Form.Group>
             </Col>
             
-            <Col md={6}>
+            <Col lg={8} md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>
                   <FaUser className="me-1" />
@@ -152,7 +171,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
           </Row>
 
           <Row>
-            <Col md={6}>
+            <Col lg={3} md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>
                   <FaClock className="me-1" />
@@ -168,7 +187,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
               </Form.Group>
             </Col>
             
-            <Col md={6}>
+            <Col lg={9} md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Motivo *</Form.Label>
                 <Form.Select name="motivo" value={formData.motivo} onChange={handleChange} required>
@@ -197,6 +216,22 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
               label="El estudiante trajo certificado médico"
             />
           </Form.Group>
+
+          {formData.trajoCertificado && (
+            <Form.Group className="mb-3">
+              <Form.Label>Adjuntar Certificado Médico</Form.Label>
+              <Form.Control
+                type="file"
+                name="certificadoAdjunto"
+                onChange={handleChange}
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                className="input-modern"
+              />
+              <Form.Text className="text-muted">
+                Formatos aceptados: PDF, JPG, PNG, DOC, DOCX. Máximo 5MB.
+              </Form.Text>
+            </Form.Group>
+          )}
 
           <Form.Group className="mb-3">
             <Form.Label>
