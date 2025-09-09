@@ -94,7 +94,7 @@ router.post('/register', ensureAuthenticated, async (req, res) => {
     }
 
     // Validar rol
-    const validRoles = ['admin', 'usuario'];
+    const validRoles = ['admin', 'profesor', 'usuario'];
     const userRole = validRoles.includes(role) ? role : 'usuario';
 
     // Verificar si el usuario ya existe

@@ -190,7 +190,7 @@ function App() {
                       <span className="sidebar-link-text">Registrar</span>
                     </Link>
                   </li>
-                  {(role === 'admin' || role === 'registrador' || role === 'usuario') && (
+                  {(role === 'admin' || role === 'usuario') && (
                     <li className="nav-item mb-2">
                       <Link to="/students" className="nav-link nav-link-custom w-100 d-flex align-items-center gap-2" onClick={handleSidebarLinkClick}>
                         <FaUsers size={20} />
@@ -221,8 +221,8 @@ function App() {
                     </>
                   )}
                   
-                  {/* Botón de Notificaciones para admin y registrador */}
-                  {(role === 'admin' || role === 'registrador') && (
+                  {/* Botón de Notificaciones para admin y profesor */}
+                  {(role === 'admin' || role === 'profesor') && (
                     <li className="nav-item mb-2">
                       <Link to="/notifications" className="nav-link nav-link-custom w-100 d-flex align-items-center gap-2" onClick={handleSidebarLinkClick}>
                         <FaEnvelope size={20} />
@@ -256,11 +256,11 @@ function App() {
                 isAuthenticated ? <RegisterTardiness /> : <Navigate to="/login" />
               }
             />
-                {/* Solo admin y registrador pueden ver gestión estudiantes */}
+                {/* Solo admin y usuario pueden ver gestión estudiantes */}
             <Route
               path="/students"
               element={
-                    isAuthenticated && (role === 'admin' || role === 'registrador' || role === 'usuario') ? <StudentManagement /> : <Navigate to="/dashboard" />
+                    isAuthenticated && (role === 'admin' || role === 'usuario') ? <StudentManagement /> : <Navigate to="/dashboard" />
               }
             />
                 {/* Solo admin puede crear usuario */}
@@ -278,11 +278,11 @@ function App() {
                   }
                 />
                 
-                {/* Solo admin y registrador pueden ver notificaciones */}
+                {/* Solo admin y profesor pueden ver notificaciones */}
                 <Route
                   path="/notifications"
                   element={
-                    isAuthenticated && (role === 'admin' || role === 'registrador') ? <Notifications /> : <Navigate to="/dashboard" />
+                    isAuthenticated && (role === 'admin' || role === 'profesor') ? <Notifications /> : <Navigate to="/dashboard" />
                   }
                 />
               </Routes>
@@ -293,107 +293,246 @@ function App() {
             <Modal 
               show={showUserModal} 
               onHide={() => setShowUserModal(false)} 
-              size="lg"
+              size="xl"
               centered
-              dialogClassName="modal-dialog-centered"
-              style={{ marginTop: '5vh' }}
+              className="user-management-modal"
             >
-              <Modal.Header closeButton>
-                <Modal.Title>Gestión de Usuarios</Modal.Title>
+              <Modal.Header closeButton className="border-0 pb-0">
+                <Modal.Title className="fw-bold text-dark">
+                  👥 Gestión de Usuarios
+                </Modal.Title>
               </Modal.Header>
-              <Modal.Body>
+              <Modal.Body className="px-4 py-3">
                 {loadingUsers ? (
-                  <div>Cargando usuarios...</div>
+                  <div className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status">
+                      <span className="visually-hidden">Cargando...</span>
+                    </div>
+                    <p className="text-muted mt-3 mb-0">Cargando usuarios...</p>
+                  </div>
                 ) : (
-                  <Table striped bordered hover responsive>
-                    <thead>
-                      <tr>
-                        <th>Usuario</th>
-                        <th>Email</th>
-                        <th>Rol</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.isArray(users) && users.length > 0 ? (
-                        users.map(u => (
-                          <tr key={u._id}>
-                            <td>{u.username}</td>
-                            <td>{u.email}</td>
-                            <td>{u.role}</td>
-                            <td>
-                              <Button size="sm" variant="primary" className="me-2" onClick={() => handleEdit(u)}>Editar</Button>
-                              <Button size="sm" variant="warning" className="me-2" onClick={() => handleResetPassword(u)}>Resetear Contraseña</Button>
-                              <Button size="sm" variant="danger" onClick={() => handleDelete(u)}>Eliminar</Button>
+                  <div className="table-responsive">
+                    <Table className="mb-0" size="sm">
+                      <thead className="bg-light">
+                        <tr>
+                          <th className="border-0 py-3 px-3 text-muted small fw-normal">Usuario</th>
+                          <th className="border-0 py-3 px-3 text-muted small fw-normal">Email</th>
+                          <th className="border-0 py-3 px-3 text-muted small fw-normal">Rol</th>
+                          <th className="border-0 py-3 px-3 text-muted small fw-normal text-center">Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Array.isArray(users) && users.length > 0 ? (
+                          users.map(u => (
+                            <tr key={u._id} className="border-bottom">
+                              <td className="py-3 px-3">
+                                <div className="d-flex align-items-center">
+                                  <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" style={{ width: '32px', height: '32px', fontSize: '0.8rem' }}>
+                                    {u.username.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="fw-medium small">{u.username}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className="text-muted small">{u.email}</span>
+                              </td>
+                              <td className="py-3 px-3">
+                                <span className={`badge ${
+                                  u.role === 'admin' ? 'bg-danger' :
+                                  u.role === 'profesor' ? 'bg-info' :
+                                  'bg-secondary'
+                                }`} style={{ fontSize: '0.7rem', padding: '0.4rem 0.8rem' }}>
+                                  {u.role === 'admin' ? 'Admin' :
+                                   u.role === 'profesor' ? 'Profesor' :
+                                   'Usuario'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                <div className="d-flex gap-1 justify-content-center">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline-primary" 
+                                    className="px-3 py-1" 
+                                    style={{ fontSize: '0.75rem', borderRadius: '0.375rem' }}
+                                    onClick={() => handleEdit(u)}
+                                  >
+                                    ✏️ Editar
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline-warning" 
+                                    className="px-3 py-1" 
+                                    style={{ fontSize: '0.75rem', borderRadius: '0.375rem' }}
+                                    onClick={() => handleResetPassword(u)}
+                                  >
+                                    🔑 Reset
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline-danger" 
+                                    className="px-3 py-1" 
+                                    style={{ fontSize: '0.75rem', borderRadius: '0.375rem' }}
+                                    onClick={() => handleDelete(u)}
+                                  >
+                                    🗑️ Eliminar
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className="text-center py-5">
+                              <div className="text-muted">
+                                <i className="fas fa-users" style={{ fontSize: '2rem', opacity: '0.3' }}></i>
+                                <p className="mt-3 mb-0">No hay usuarios disponibles</p>
+                              </div>
                             </td>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan="4" className="text-center">No hay usuarios o no autorizado.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </Table>
+                        )}
+                      </tbody>
+                    </Table>
+                  </div>
                 )}
-                {actionMsg && <div className="text-danger mt-2">{actionMsg}</div>}
+                {actionMsg && (
+                  <div className="alert alert-danger mt-3 mb-0 py-2" style={{ fontSize: '0.85rem' }}>
+                    {actionMsg}
+                  </div>
+                )}
               </Modal.Body>
-              <Modal.Footer>
-                <Button variant="secondary" onClick={() => setShowUserModal(false)}>
+              <Modal.Footer className="border-0 pt-0">
+                <Button 
+                  variant="outline-secondary" 
+                  onClick={() => setShowUserModal(false)}
+                  className="px-4 py-2"
+                  style={{ borderRadius: '0.5rem' }}
+                >
                   Cerrar
                 </Button>
               </Modal.Footer>
             </Modal>
             
             {/* Modal para editar usuario */}
-            <Modal show={showEditModal} onHide={() => setShowEditModal(false)}>
-              <Modal.Header closeButton>
-                <Modal.Title>Editar Usuario</Modal.Title>
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
+              <Modal.Header closeButton className="border-0 pb-0">
+                <Modal.Title className="fw-bold text-dark">
+                  ✏️ Editar Usuario
+                </Modal.Title>
               </Modal.Header>
-              <Modal.Body>
+              <Modal.Body className="px-4 py-3">
                 <Form>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Usuario</Form.Label>
-                    <Form.Control type="text" value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })} />
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-medium text-muted small">Nombre de Usuario</Form.Label>
+                    <Form.Control 
+                      type="text" 
+                      value={editForm.username} 
+                      onChange={e => setEditForm({ ...editForm, username: e.target.value })}
+                      className="border-0 bg-light"
+                      style={{ borderRadius: '0.5rem', padding: '0.75rem' }}
+                    />
                   </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Email</Form.Label>
-                    <Form.Control type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-medium text-muted small">Correo Electrónico</Form.Label>
+                    <Form.Control 
+                      type="email" 
+                      value={editForm.email} 
+                      onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                      className="border-0 bg-light"
+                      style={{ borderRadius: '0.5rem', padding: '0.75rem' }}
+                    />
                   </Form.Group>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Rol</Form.Label>
-                    <Form.Select value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })}>
-                      <option value="admin">Administrador</option>
-                      <option value="registrador">Registrador</option>
-                      <option value="usuario">Usuario</option>
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-medium text-muted small">Rol del Usuario</Form.Label>
+                    <Form.Select 
+                      value={editForm.role} 
+                      onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+                      className="border-0 bg-light"
+                      style={{ borderRadius: '0.5rem', padding: '0.75rem' }}
+                    >
+                      <option value="admin">👑 Administrador</option>
+                      <option value="profesor">👨‍🏫 Profesor</option>
+                      <option value="usuario">👤 Usuario</option>
                     </Form.Select>
                   </Form.Group>
                 </Form>
-                {actionMsg && <div className="text-danger mt-2">{actionMsg}</div>}
+                {actionMsg && (
+                  <div className="alert alert-danger py-2" style={{ fontSize: '0.85rem' }}>
+                    {actionMsg}
+                  </div>
+                )}
               </Modal.Body>
-              <Modal.Footer>
-                <Button variant="secondary" onClick={() => setShowEditModal(false)}>Cancelar</Button>
-                <Button variant="primary" onClick={handleSaveEdit}>Guardar Cambios</Button>
+              <Modal.Footer className="border-0 pt-0">
+                <Button 
+                  variant="outline-secondary" 
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 me-2"
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="primary" 
+                  onClick={handleSaveEdit}
+                  className="px-4 py-2"
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  💾 Guardar Cambios
+                </Button>
               </Modal.Footer>
             </Modal>
             
             {/* Modal para resetear contraseña */}
-            <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)}>
-              <Modal.Header closeButton>
-                <Modal.Title>Resetear Contraseña</Modal.Title>
+            <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)} centered>
+              <Modal.Header closeButton className="border-0 pb-0">
+                <Modal.Title className="fw-bold text-dark">
+                  🔑 Resetear Contraseña
+                </Modal.Title>
               </Modal.Header>
-              <Modal.Body>
+              <Modal.Body className="px-4 py-3">
+                <div className="text-center mb-4">
+                  <div className="bg-warning text-dark rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style={{ width: '60px', height: '60px' }}>
+                    <i className="fas fa-key" style={{ fontSize: '1.5rem' }}></i>
+                  </div>
+                  <p className="text-muted mb-0">Ingresa la nueva contraseña para <strong>{selectedUser?.username}</strong></p>
+                </div>
                 <Form>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Nueva Contraseña</Form.Label>
-                    <Form.Control type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+                  <Form.Group className="mb-4">
+                    <Form.Label className="fw-medium text-muted small">Nueva Contraseña</Form.Label>
+                    <Form.Control 
+                      type="password" 
+                      value={newPassword} 
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="border-0 bg-light"
+                      style={{ borderRadius: '0.5rem', padding: '0.75rem' }}
+                      placeholder="Ingresa la nueva contraseña"
+                    />
                   </Form.Group>
                 </Form>
-                {actionMsg && <div className="text-danger mt-2">{actionMsg}</div>}
+                {actionMsg && (
+                  <div className="alert alert-danger py-2" style={{ fontSize: '0.85rem' }}>
+                    {actionMsg}
+                  </div>
+                )}
               </Modal.Body>
-              <Modal.Footer>
-                <Button variant="secondary" onClick={() => setShowPasswordModal(false)}>Cancelar</Button>
-                <Button variant="primary" onClick={handleSavePassword}>Guardar</Button>
+              <Modal.Footer className="border-0 pt-0">
+                <Button 
+                  variant="outline-secondary" 
+                  onClick={() => setShowPasswordModal(false)}
+                  className="px-4 py-2 me-2"
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="warning" 
+                  onClick={handleSavePassword}
+                  className="px-4 py-2"
+                  style={{ borderRadius: '0.5rem' }}
+                >
+                  🔑 Guardar Contraseña
+                </Button>
               </Modal.Footer>
             </Modal>
           </div>

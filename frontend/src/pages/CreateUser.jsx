@@ -83,6 +83,7 @@ const CreateUser = () => {
               <Form.Label>Rol</Form.Label>
               <Form.Select name="role" value={formData.role} onChange={handleChange} required>
                 <option value="usuario">Usuario</option>
+                <option value="profesor">Profesor</option>
                 <option value="admin">Administrador</option>
               </Form.Select>
             </Form.Group>
