@@ -57,6 +57,9 @@ const Dashboard = () => {
   const [selectedPunctualityCategory, setSelectedPunctualityCategory] = useState('');
   const [selectedPunctualityStudents, setSelectedPunctualityStudents] = useState([]);
 
+  // Estados para el modal de estadísticas detalladas
+  const [showTodayStatsModal, setShowTodayStatsModal] = useState(false);
+
   // Estado para el reloj
   const [currentTime, setCurrentTime] = useState(new Date());
   const today = new Date();
@@ -674,9 +677,21 @@ const Dashboard = () => {
           <Col md={3} sm={6}>
             <OverlayTrigger
               placement="top"
-              overlay={<Tooltip>Total de atrasos registrados hoy</Tooltip>}
+              overlay={<Tooltip>Click para ver detalles de atrasos de hoy</Tooltip>}
             >
-              <div className="stats-item">
+              <div 
+                className="stats-item" 
+                style={{ cursor: 'pointer' }}
+                onClick={() => setShowTodayStatsModal(true)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+                }}
+              >
                 <div className="stats-icon">
                   <FaClock />
                 </div>
@@ -749,6 +764,7 @@ const Dashboard = () => {
           </Col>
         </Row>
       </div>
+
 
       {/* Resumen de Puntualidad Institucional */}
       <Row className="mb-4">
@@ -1391,6 +1407,275 @@ const Dashboard = () => {
             }}
           >
             📊 Exportar Lista
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+
+      {/* Modal para estadísticas detalladas de hoy */}
+      <Modal 
+        show={showTodayStatsModal} 
+        onHide={() => setShowTodayStatsModal(false)}
+        size="xl"
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            📊 Estadísticas Detalladas - {new Date().toLocaleDateString('es-CL', { 
+              day: 'numeric', 
+              month: 'long', 
+              year: 'numeric' 
+            })}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {(() => {
+            // Filtrar atrasos del día actual
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+            
+            const todayTardiness = tardiness.filter(record => {
+              const recordDate = new Date(record.fecha);
+              const recordDateStr = recordDate.toISOString().split('T')[0];
+              return recordDateStr === todayStr;
+            });
+
+            // Calcular estadísticas del día
+            const stats = {
+              total: todayTardiness.length,
+              withCertificate: todayTardiness.filter(r => r.trajoCertificado).length,
+              withoutCertificate: todayTardiness.filter(r => !r.trajoCertificado).length,
+              present: todayTardiness.filter(r => r.concepto === 'presente').length,
+              latePresent: todayTardiness.filter(r => r.concepto === 'atrasado-presente').length,
+              absent: todayTardiness.filter(r => r.concepto === 'ausente').length,
+              byCourse: {},
+              byHour: {}
+            };
+
+            // Agrupar por curso
+            todayTardiness.forEach(record => {
+              if (!stats.byCourse[record.curso]) {
+                stats.byCourse[record.curso] = 0;
+              }
+              stats.byCourse[record.curso]++;
+            });
+
+            // Agrupar por hora
+            todayTardiness.forEach(record => {
+              const hour = record.hora.split(':')[0];
+              if (!stats.byHour[hour]) {
+                stats.byHour[hour] = 0;
+              }
+              stats.byHour[hour]++;
+            });
+
+            if (todayTardiness.length === 0) {
+              return (
+                <div className="text-center p-5">
+                  <div className="text-success mb-4">
+                    <i className="fas fa-check-circle" style={{ fontSize: '4rem' }}></i>
+                  </div>
+                  <h4 className="text-success mb-3">¡Excelente!</h4>
+                  <p className="text-muted mb-0 fs-5">No hay atrasos registrados hoy</p>
+                  <small className="text-muted">Todos los estudiantes llegaron a tiempo</small>
+                </div>
+              );
+            }
+
+            return (
+              <div>
+                {/* Resumen general */}
+                <Row className="mb-4">
+                  <Col md={3}>
+                    <Card className="text-center border-0 shadow-sm h-100">
+                      <Card.Body className="py-3">
+                        <h3 className="text-primary mb-1" style={{ fontSize: '2rem' }}>{stats.total}</h3>
+                        <p className="text-muted small mb-0">Total Atrasos</p>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                  <Col md={3}>
+                    <Card className="text-center border-0 shadow-sm h-100">
+                      <Card.Body className="py-3">
+                        <h3 className="text-success mb-1" style={{ fontSize: '2rem' }}>{stats.withCertificate}</h3>
+                        <p className="text-muted small mb-0">Con Certificado</p>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                  <Col md={3}>
+                    <Card className="text-center border-0 shadow-sm h-100">
+                      <Card.Body className="py-3">
+                        <h3 className="text-danger mb-1" style={{ fontSize: '2rem' }}>{stats.withoutCertificate}</h3>
+                        <p className="text-muted small mb-0">Sin Certificado</p>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                  <Col md={3}>
+                    <Card className="text-center border-0 shadow-sm h-100">
+                      <Card.Body className="py-3">
+                        <h3 className="text-warning mb-1" style={{ fontSize: '2rem' }}>{stats.latePresent}</h3>
+                        <p className="text-muted small mb-0">Atrasado-Presente</p>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
+
+                {/* Distribución por curso */}
+                <Row className="mb-3">
+                  <Col>
+                    <Card className="border-0 shadow-sm">
+                      <Card.Header className="bg-light border-0 py-2">
+                        <h6 className="mb-0 text-muted small">📚 Distribución por Curso</h6>
+                      </Card.Header>
+                      <Card.Body className="py-2">
+                        <div className="d-flex flex-wrap gap-2">
+                          {Object.entries(stats.byCourse).map(([curso, count]) => (
+                            <div key={curso} className="d-flex align-items-center" style={{ 
+                              background: '#f8f9fa', 
+                              borderRadius: '0.25rem',
+                              border: '1px solid #e9ecef',
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.75rem'
+                            }}>
+                              <span className="fw-medium text-muted me-2">{curso}</span>
+                              <span className="badge bg-primary" style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem' }}>
+                                {count}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
+
+                {/* Distribución por hora */}
+                <Row className="mb-3">
+                  <Col>
+                    <Card className="border-0 shadow-sm">
+                      <Card.Header className="bg-light border-0 py-2">
+                        <h6 className="mb-0 text-muted small">🕐 Distribución por Hora</h6>
+                      </Card.Header>
+                      <Card.Body className="py-2">
+                        <div className="d-flex flex-wrap gap-2">
+                          {Object.entries(stats.byHour)
+                            .sort(([a], [b]) => a.localeCompare(b))
+                            .map(([hour, count]) => (
+                            <div key={hour} className="d-flex align-items-center" style={{ 
+                              background: '#f8f9fa', 
+                              borderRadius: '0.25rem',
+                              border: '1px solid #e9ecef',
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.75rem'
+                            }}>
+                              <span className="fw-medium text-muted me-2">{hour}:00</span>
+                              <span className="badge bg-warning text-dark" style={{ fontSize: '0.65rem', padding: '0.2rem 0.4rem' }}>
+                                {count}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
+
+                {/* Lista detallada */}
+                <Row>
+                  <Col>
+                    <Card className="border-0 shadow-sm">
+                      <Card.Header className="bg-light border-0 py-3">
+                        <h6 className="mb-0 text-muted">📋 Lista Detallada de Atrasos</h6>
+                      </Card.Header>
+                      <Card.Body className="p-0">
+                        <div className="table-responsive">
+                          <Table className="mb-0" size="sm">
+                            <thead className="bg-light">
+                              <tr>
+                                <th className="border-0 py-2 px-3 text-muted small fw-normal">#</th>
+                                <th className="border-0 py-2 px-3 text-muted small fw-normal">Estudiante</th>
+                                <th className="border-0 py-2 px-3 text-muted small fw-normal">Curso</th>
+                                <th className="border-0 py-2 px-3 text-muted small fw-normal">Hora</th>
+                                <th className="border-0 py-2 px-3 text-muted small fw-normal">Motivo</th>
+                                <th className="border-0 py-2 px-3 text-muted small fw-normal">Cert.</th>
+                                <th className="border-0 py-2 px-3 text-muted small fw-normal">Estado</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {todayTardiness.map((record, index) => {
+                                const student = students.find(s => s.rut === record.studentRut);
+                                const studentName = student ? `${student.nombres} ${student.apellidosPaterno}` : record.studentRut;
+                                
+                                return (
+                                  <tr key={record._id} className="border-bottom">
+                                    <td className="py-2 px-3 text-center">
+                                      <span className="badge bg-light text-dark" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>
+                                        {index + 1}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      <div className="d-flex flex-column">
+                                        <span className="fw-medium small">{studentName}</span>
+                                        <span className="text-muted" style={{ fontSize: '0.7rem' }}>{record.studentRut}</span>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <span className="badge bg-primary" style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}>
+                                        {record.curso}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <span className="badge bg-warning text-dark" style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}>
+                                        {record.hora}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3">
+                                      <span className="text-muted small" style={{ fontSize: '0.75rem' }}>
+                                        {record.motivo.length > 30 ? `${record.motivo.substring(0, 30)}...` : record.motivo}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <span className={`badge ${record.trajoCertificado ? 'bg-success' : 'bg-danger'}`} style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}>
+                                        {record.trajoCertificado ? 'Sí' : 'No'}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-3 text-center">
+                                      <span className={`badge ${
+                                        record.concepto === 'presente' ? 'bg-success' :
+                                        record.concepto === 'atrasado-presente' ? 'bg-warning text-dark' :
+                                        'bg-danger'
+                                      }`} style={{ fontSize: '0.7rem', padding: '0.25rem 0.5rem' }}>
+                                        {record.concepto === 'presente' ? 'P' :
+                                         record.concepto === 'atrasado-presente' ? 'A-P' :
+                                         'A'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </Table>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  </Col>
+                </Row>
+              </div>
+            );
+          })()}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowTodayStatsModal(false)}>
+            Cerrar
+          </Button>
+          <Button 
+            variant="primary" 
+            onClick={() => {
+              // Aquí se podría implementar la exportación a Excel o PDF
+              alert('Función de exportación próximamente disponible');
+            }}
+          >
+            📊 Exportar Estadísticas
           </Button>
         </Modal.Footer>
       </Modal>
