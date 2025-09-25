@@ -1,5 +1,5 @@
 // hooks/useManualTardiness.js
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const STORAGE_KEY = 'manualTardinessRecords';
 
@@ -42,7 +42,7 @@ export const useManualTardiness = () => {
   };
 
   // Marcar registros como sincronizados
-  const markAsSynced = (recordIds) => {
+  const markAsSynced = useCallback((recordIds) => {
     const updatedRecords = manualRecords.map(record => 
       recordIds.includes(record.id) 
         ? { ...record, sincronizado: true }
@@ -53,21 +53,21 @@ export const useManualTardiness = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedRecords));
     
     console.log('✅ Registros marcados como sincronizados:', recordIds);
-  };
+  }, [manualRecords]);
 
   // Eliminar registros sincronizados
-  const removeSyncedRecords = () => {
+  const removeSyncedRecords = useCallback(() => {
     const pendingRecords = manualRecords.filter(record => !record.sincronizado);
     setManualRecords(pendingRecords);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingRecords));
     
     console.log('🗑️ Registros sincronizados eliminados');
-  };
+  }, [manualRecords]);
 
   // Obtener registros pendientes de sincronización
-  const getPendingRecords = () => {
+  const getPendingRecords = useCallback(() => {
     return manualRecords.filter(record => !record.sincronizado);
-  };
+  }, [manualRecords]);
 
   // Limpiar todos los registros (para testing)
   const clearAllRecords = () => {

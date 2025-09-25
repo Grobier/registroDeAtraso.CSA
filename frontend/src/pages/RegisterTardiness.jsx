@@ -37,7 +37,13 @@ const RegisterTardiness = () => {
   // Actualizar registros pendientes cuando cambien
   useEffect(() => {
     const pending = getPendingRecords();
-    setPendingRecords(pending);
+    setPendingRecords(prev => {
+      // Solo actualizar si realmente cambió
+      if (JSON.stringify(prev) !== JSON.stringify(pending)) {
+        return pending;
+      }
+      return prev;
+    });
   }, [getPendingRecords]);
 
   // Sincronizar registros pendientes cuando vuelva la conexión
