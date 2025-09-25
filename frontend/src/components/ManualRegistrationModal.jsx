@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Row, Col } from 'react-bootstrap';
 import { FaWifi, FaClock, FaUser, FaFileAlt, FaExclamationTriangle } from 'react-icons/fa';
+import Swal from 'sweetalert2';
 import axios from 'axios';
 
 const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
@@ -79,30 +80,71 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
     e.preventDefault();
     
     if (!formData.curso || !formData.estudiante || !formData.motivo || !formData.hora) {
-      alert('Por favor complete todos los campos obligatorios');
+      Swal.fire({
+        title: 'Campos Incompletos',
+        text: 'Por favor complete todos los campos obligatorios',
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      });
       return;
     }
 
-    const atrasoManual = {
-      id: Date.now(), // ID único temporal
-      ...formData,
-      timestamp: new Date().toISOString(),
-      sincronizado: false,
-      tipo: 'manual'
-    };
+    // Mostrar confirmación antes de proceder
+    Swal.fire({
+      title: '¿Confirmar Registro Manual?',
+      html: `
+        <div class="text-start">
+          <p><strong>Estudiante:</strong> ${formData.estudiante}</p>
+          <p><strong>Curso:</strong> ${formData.curso}</p>
+          <p><strong>Hora:</strong> ${formData.hora}</p>
+          <p><strong>Motivo:</strong> ${formData.motivo}</p>
+          <p><strong>Certificado:</strong> ${formData.trajoCertificado ? 'Sí' : 'No'}</p>
+          ${formData.observaciones ? `<p><strong>Observaciones:</strong> ${formData.observaciones}</p>` : ''}
+        </div>
+        <hr>
+        <p class="text-warning"><strong>⚠️ Recuerde:</strong> Este registro se sincronizará cuando vuelva la conexión a internet.</p>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, registrar manualmente',
+      cancelButtonText: 'Cancelar',
+      width: '500px'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // Proceder con el registro
+        const atrasoManual = {
+          id: Date.now(), // ID único temporal
+          ...formData,
+          timestamp: new Date().toISOString(),
+          sincronizado: false,
+          tipo: 'manual'
+        };
 
-    onSave(atrasoManual);
-    onHide();
-    
-    // Limpiar formulario
-    setFormData({
-      curso: '',
-      estudiante: '',
-      motivo: '',
-      hora: '',
-      trajoCertificado: false,
-      certificadoAdjunto: null,
-      observaciones: ''
+        onSave(atrasoManual);
+        onHide();
+        
+        // Mostrar confirmación de éxito
+        Swal.fire({
+          title: 'Registro Manual Completado',
+          text: 'El atraso ha sido registrado manualmente. Se sincronizará automáticamente cuando vuelva la conexión.',
+          icon: 'success',
+          timer: 3000,
+          showConfirmButton: false
+        });
+        
+        // Limpiar formulario
+        setFormData({
+          curso: '',
+          estudiante: '',
+          motivo: '',
+          hora: '',
+          trajoCertificado: false,
+          certificadoAdjunto: null,
+          observaciones: ''
+        });
+      }
     });
   };
 
