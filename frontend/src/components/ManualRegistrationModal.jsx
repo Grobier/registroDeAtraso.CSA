@@ -22,7 +22,8 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
     const now = new Date();
     const horaActual = now.toLocaleTimeString('es-CL', { 
       hour: '2-digit', 
-      minute: '2-digit' 
+      minute: '2-digit',
+      hour12: false  // Usar formato 24 horas para compatibilidad con input time
     });
     setFormData(prev => ({ ...prev, hora: horaActual }));
   }, []);

@@ -6,7 +6,7 @@ require('dotenv').config();
 const createEmailTransporter = (options = {}) => {
   const isProduction = process.env.NODE_ENV === 'production';
   
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
