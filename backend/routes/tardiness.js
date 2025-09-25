@@ -6,9 +6,9 @@ const path = require('path');
 const fs = require('fs');
 const Tardiness = require('../models/Tardiness');
 const Student = require('../models/Student');
-const nodemailer = require('nodemailer');
 const moment = require('moment-timezone');
 const ActivityLog = require('../models/ActivityLog');
+const { sendEmail, verifyEmailConnection } = require('../config/emailConfig');
 require('dotenv').config();
 const { ensureAuthenticated } = require('../middlewares/auth');
 
@@ -48,44 +48,10 @@ const upload = multer({
   }
 });
 
-// Configuración de Nodemailer con debug y logger activados
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false,
-    minVersion: "TLSv1.2"
-  },
-  debug: true,
-  logger: true
-});
-
 // Verificar la conexión SMTP al iniciar el servidor
-transporter.verify((error, success) => {
-  if (error) {
-    console.error("Error en transporter.verify:", error);
-  } else {
-    console.log("SMTP Server está listo:", success);
-  }
+verifyEmailConnection().catch(error => {
+  console.error("Error en verificación inicial de email:", error);
 });
-
-// Función para enviar correo (promisificada)
-const sendMail = (options) => {
-  return new Promise((resolve, reject) => {
-    transporter.sendMail(options, (error, info) => {
-      if (error) {
-        console.error("Error al enviar correo:", error);
-        reject(error);
-      } else {
-        console.log("Correo enviado, respuesta completa:", info);
-        resolve(info);
-      }
-    });
-  });
-};
 
 // Función para limpiar completamente el RUT
 const cleanRut = (rut) => {
@@ -233,13 +199,12 @@ Atentamente,
 Equipo directivo.`
       };
 
-      // Enviar correo
-      try {
-        const mailInfo = await sendMail(mailOptions);
-        console.log("Correo enviado:", mailInfo.response);
-      } catch (mailError) {
+      // Enviar correo de forma asíncrona (no bloquea la respuesta)
+      sendEmail(mailOptions).then(mailInfo => {
+        console.log("Correo enviado exitosamente:", mailInfo.messageId);
+      }).catch(mailError => {
         console.error("Error al enviar correo:", mailError);
-      }
+      });
     } else {
       console.log("⚠️ No se encontró el estudiante. Comparación de RUTs:");
       console.log("RUT buscado:", searchRut);

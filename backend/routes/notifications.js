@@ -1,20 +1,11 @@
 // routes/notifications.js
 const express = require('express');
 const router = express.Router();
-const nodemailer = require('nodemailer');
 const Student = require('../models/Student');
 const Tardiness = require('../models/Tardiness');
 const EmailLog = require('../models/EmailLog');
+const { sendEmail } = require('../config/emailConfig');
 const { ensureAuthenticated } = require('../middlewares/auth');
-
-// Configuración del transportador de correo
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER || 'tu-email@gmail.com',
-    pass: process.env.EMAIL_PASS || 'tu-app-password'
-  }
-});
 
 // Obtener estudiantes con atrasos ordenados por cantidad
 router.get('/students-with-tardiness', ensureAuthenticated, async (req, res) => {
@@ -258,7 +249,7 @@ router.post('/send-emails', ensureAuthenticated, async (req, res) => {
           html: email.content.replace(/\n/g, '<br>')
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         sentEmails.push(email.to);
       } catch (error) {
         console.error(`Error enviando correo a ${email.to}:`, error);
