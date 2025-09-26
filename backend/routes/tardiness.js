@@ -49,8 +49,15 @@ const upload = multer({
 });
 
 // Verificar la conexión SMTP al iniciar el servidor
-verifyEmailConnection().catch(error => {
-  console.error("Error en verificación inicial de email:", error);
+console.log("🔧 Iniciando verificación de conexión SMTP...");
+console.log("🔧 EMAIL_USER configurado:", !!process.env.EMAIL_USER);
+console.log("🔧 EMAIL_PASS configurado:", !!process.env.EMAIL_PASS);
+
+verifyEmailConnection().then(success => {
+  console.log("✅ Verificación SMTP exitosa:", success);
+}).catch(error => {
+  console.error("❌ Error en verificación inicial de email:", error);
+  console.error("❌ Stack trace:", error.stack);
 });
 
 // Función para limpiar completamente el RUT
@@ -67,8 +74,16 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
   console.log('Body recibido:', req.body);
   
   try {
-    const { motivo, rut, curso, trajoCertificado } = req.body;
+    const { motivo, rut, curso, trajoCertificado, horaManual } = req.body;
     const certificadoAdjunto = req.file ? req.file.filename : null;
+    
+    console.log("\n=== DATOS RECIBIDOS ===");
+    console.log("Motivo:", motivo);
+    console.log("RUT recibido:", rut);
+    console.log("Curso:", curso);
+    console.log("Trajo certificado:", trajoCertificado);
+    console.log("Hora manual:", horaManual);
+    console.log("Certificado adjunto:", certificadoAdjunto);
     
     // Limpiamos el RUT completamente
     const searchRut = cleanRut(rut);
@@ -83,17 +98,36 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       return res.status(400).json({ error: "Campos requeridos: motivo, rut y curso." });
     }
 
-    // Asignar la hora actual del servidor con la zona horaria correcta
-    const currentTime = moment().tz('America/Santiago').format('HH:mm');
-    const currentHour = moment().tz('America/Santiago').hour();
-    const currentMinute = moment().tz('America/Santiago').minute();
+    // Determinar la hora a usar: manual si se proporciona, actual si no
+    let horaRegistro, horaRegistroHour, horaRegistroMinute;
+    
+    if (horaManual) {
+      // Usar la hora manual proporcionada
+      console.log("🕐 Usando hora manual:", horaManual);
+      horaRegistro = horaManual;
+      
+      // Parsear la hora manual (formato HH:mm)
+      const [hours, minutes] = horaManual.split(':').map(Number);
+      horaRegistroHour = hours;
+      horaRegistroMinute = minutes;
+    } else {
+      // Usar la hora actual del servidor
+      console.log("🕐 Usando hora actual del servidor");
+      horaRegistro = moment().tz('America/Santiago').format('HH:mm');
+      horaRegistroHour = moment().tz('America/Santiago').hour();
+      horaRegistroMinute = moment().tz('America/Santiago').minute();
+    }
+    
+    console.log("🕐 Hora final a registrar:", horaRegistro);
+    console.log("🕐 Hora (número):", horaRegistroHour);
+    console.log("🕐 Minutos (número):", horaRegistroMinute);
     
          // Lógica para determinar concepto y si requiere certificado
      let concepto = 'presente';
      let requiereCertificado = false;
      
      // Si llega antes o a las 9:30 (9 horas y 30 minutos = 9*60 + 30 = 570 minutos)
-     const minutosDesdeMedianoche = currentHour * 60 + currentMinute;
+     const minutosDesdeMedianoche = horaRegistroHour * 60 + horaRegistroMinute;
      const limiteMinutos = 9 * 60 + 30; // 9:30 AM
      
      if (minutosDesdeMedianoche <= limiteMinutos) {
@@ -122,7 +156,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
 
     // Guardar el registro de atraso en Tardiness
     const newTardiness = new Tardiness({ 
-      hora: currentTime,
+      hora: horaRegistro,
       motivo,
       studentRut: searchRut,
       curso,
@@ -151,37 +185,74 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       tipo: typeof s.rut
     })));
 
-    // Buscar el estudiante con una comparación más flexible
-    const student = await Student.findOne({
+    // Buscar el estudiante con múltiples estrategias de búsqueda
+    let student = await Student.findOne({
       $or: [
         { rut: searchRut },
         { rut: { $regex: new RegExp(`^${searchRut}$`, 'i') } }
       ]
     });
+
+    // Si no se encuentra, intentar búsquedas más flexibles
+    if (!student) {
+      console.log("🔍 Primera búsqueda falló, intentando búsquedas alternativas...");
+      
+      // Buscar por RUT sin guión ni dígito verificador
+      const rutSinGuion = searchRut.replace(/[-\dkK]/g, '');
+      console.log("🔍 Buscando RUT sin guión:", rutSinGuion);
+      
+      student = await Student.findOne({
+        $or: [
+          { rut: { $regex: new RegExp(`^${rutSinGuion}`, 'i') } },
+          { rut: { $regex: new RegExp(`${rutSinGuion}`, 'i') } }
+        ]
+      });
+    }
+
+    // Si aún no se encuentra, buscar por coincidencia parcial
+    if (!student) {
+      console.log("🔍 Segunda búsqueda falló, intentando coincidencia parcial...");
+      
+      student = await Student.findOne({
+        rut: { $regex: new RegExp(searchRut.replace(/[-\dkK]/g, ''), 'i') }
+      });
+    }
     console.log("\n=== RESULTADO DE BÚSQUEDA ===");
     console.log("Estudiante encontrado:", student ? "SÍ" : "NO");
     
     if (student) {
+      console.log("✅ Estudiante encontrado exitosamente!");
       console.log("Datos del estudiante encontrado:", {
         rut: student.rut,
         nombres: student.nombres,
-        curso: student.curso
+        curso: student.curso,
+        correoApoderado: student.correoApoderado
       });
-      // Log: mostrar el correo del apoderado
-      console.log("Correo del apoderado:", student.correoApoderado);
+      console.log("📧 Correo del apoderado:", student.correoApoderado);
+      console.log("📧 Tipo de correo:", typeof student.correoApoderado);
+      console.log("📧 Longitud del correo:", student.correoApoderado?.length);
       
-      const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
+      // Validar que el estudiante tenga correo del apoderado
+      if (!student.correoApoderado || student.correoApoderado.trim() === '') {
+        console.log("⚠️ El estudiante no tiene correo del apoderado configurado");
+        console.log("Datos del estudiante:", {
+          rut: student.rut,
+          nombres: student.nombres,
+          correoApoderado: student.correoApoderado
+        });
+      } else {
+        const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
 
-      // Formatear la fecha y hora con la zona horaria correcta
-      const fechaFormateada = moment(newTardiness.fecha).tz('America/Santiago').format('DD/MM/YYYY');
-      const horaFormateada = moment().tz('America/Santiago').format('HH:mm');
+        // Formatear la fecha y hora con la zona horaria correcta
+        const fechaFormateada = moment(newTardiness.fecha).tz('America/Santiago').format('DD/MM/YYYY');
+        const horaFormateada = horaRegistro; // Usar la hora registrada (manual o actual)
 
-      // Opciones del correo
-      const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: student.correoApoderado,
-        subject: 'Notificación de Atraso',
-        text: `Estimado(a) apoderado(a) de ${nombreCompleto},:
+        // Opciones del correo
+        const mailOptions = {
+          from: process.env.EMAIL_USER,
+          to: student.correoApoderado,
+          subject: 'Notificación de Atraso',
+          text: `Estimado(a) apoderado(a) de ${nombreCompleto},:
 
 Le informamos que el/la estudiante ${nombreCompleto} registró un atraso el día ${fechaFormateada}, 
 ingresando al establecimiento a las ${horaFormateada}.
@@ -197,14 +268,35 @@ Agradecemos su atención y compromiso.
 Atentamente,
 
 Equipo directivo.`
-      };
+        };
 
-      // Enviar correo de forma asíncrona (no bloquea la respuesta)
-      sendEmail(mailOptions).then(mailInfo => {
-        console.log("Correo enviado exitosamente:", mailInfo.messageId);
-      }).catch(mailError => {
-        console.error("Error al enviar correo:", mailError);
-      });
+        console.log("📧 Preparando envío de correo a:", student.correoApoderado);
+        console.log("📧 Asunto:", mailOptions.subject);
+        console.log("📧 Variables de entorno EMAIL_USER:", process.env.EMAIL_USER ? "Configurado" : "NO CONFIGURADO");
+        console.log("📧 Variables de entorno EMAIL_PASS:", process.env.EMAIL_PASS ? "Configurado" : "NO CONFIGURADO");
+        console.log("📧 NODE_ENV:", process.env.NODE_ENV);
+        console.log("📧 mailOptions completo:", JSON.stringify(mailOptions, null, 2));
+
+        // Test de la función sendEmail
+        console.log("🧪 Probando función sendEmail...");
+        console.log("🧪 Tipo de sendEmail:", typeof sendEmail);
+        console.log("🧪 sendEmail es función:", typeof sendEmail === 'function');
+        
+        // Enviar correo de forma asíncrona (no bloquea la respuesta)
+        sendEmail(mailOptions).then(mailInfo => {
+          console.log("✅ Correo enviado exitosamente:", mailInfo.messageId);
+          console.log("✅ Respuesta completa:", mailInfo);
+        }).catch(mailError => {
+          console.error("❌ Error al enviar correo:", mailError);
+          console.error("❌ Detalles del error:", {
+            code: mailError.code,
+            command: mailError.command,
+            response: mailError.response,
+            message: mailError.message,
+            stack: mailError.stack
+          });
+        });
+      }
     } else {
       console.log("⚠️ No se encontró el estudiante. Comparación de RUTs:");
       console.log("RUT buscado:", searchRut);

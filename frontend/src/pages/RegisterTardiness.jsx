@@ -5,7 +5,6 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import { FaPlusCircle, FaWifi, FaClock, FaExclamationTriangle } from 'react-icons/fa';
 import useOnlineStatus from '../hooks/useOnlineStatus';
-import { useManualTardiness } from '../hooks/useManualTardiness';
 import ManualRegistrationModal from '../components/ManualRegistrationModal';
 import './RegisterTardiness.css';
 
@@ -28,31 +27,10 @@ const RegisterTardiness = () => {
   
   // Estados para registro manual
   const [showManualModal, setShowManualModal] = useState(false);
-  const [pendingRecords, setPendingRecords] = useState([]);
   
-  // Hooks personalizados
+  // Hook de estado de conexión
   const { isOnline } = useOnlineStatus();
-  const { addManualRecord, getPendingRecords, markAsSynced, removeSyncedRecords } = useManualTardiness();
 
-  // Actualizar registros pendientes cuando cambien
-  useEffect(() => {
-    const pending = getPendingRecords();
-    setPendingRecords(prev => {
-      // Solo actualizar si realmente cambió
-      if (JSON.stringify(prev) !== JSON.stringify(pending)) {
-        return pending;
-      }
-      return prev;
-    });
-  }, [getPendingRecords]);
-
-  // Sincronizar registros pendientes cuando vuelva la conexión
-  useEffect(() => {
-    if (isOnline && pendingRecords.length > 0) {
-      console.log('🔄 Conexión restaurada, sincronizando registros pendientes...');
-      syncPendingRecords();
-    }
-  }, [isOnline, pendingRecords.length]);
 
   // Obtener la lista de cursos
   useEffect(() => {
@@ -132,111 +110,64 @@ const RegisterTardiness = () => {
     }
   };
 
-  // Función para sincronizar registros pendientes
-  const syncPendingRecords = async () => {
-    const pending = getPendingRecords();
-    if (pending.length === 0) return;
-
-    console.log(`🔄 Sincronizando ${pending.length} registros pendientes...`);
-    
-    let syncedCount = 0;
-    let failedCount = 0;
-    const syncedIds = [];
-
-    for (const record of pending) {
-      try {
-        // Preparar datos para envío
-        const formDataToSend = new FormData();
-        formDataToSend.append('motivo', record.motivo);
-        formDataToSend.append('rut', record.estudiante);
-        formDataToSend.append('curso', record.curso);
-        formDataToSend.append('trajoCertificado', record.trajoCertificado);
-        
-        if (record.certificadoAdjunto) {
-          formDataToSend.append('certificadoAdjunto', record.certificadoAdjunto);
-        }
-
-        // Enviar al servidor
-        const response = await axios.post(`${API_BASE_URL}/api/tardiness`, formDataToSend, {
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-
-        if (response.status === 201) {
-          syncedCount++;
-          syncedIds.push(record.id);
-          console.log(`✅ Registro sincronizado: ${record.estudiante}`);
-        }
-      } catch (error) {
-        failedCount++;
-        console.error(`❌ Error sincronizando registro ${record.estudiante}:`, error);
-      }
-    }
-
-    // Marcar registros como sincronizados
-    if (syncedIds.length > 0) {
-      markAsSynced(syncedIds);
-      removeSyncedRecords();
-      
-      // Actualizar estado local
-      const updatedPending = getPendingRecords();
-      setPendingRecords(updatedPending);
-    }
-
-    // Mostrar resultado
-    if (syncedCount > 0) {
-      Swal.fire({
-        title: 'Sincronización Completada',
-        html: `
-          <div class="text-center">
-            <p><strong>✅ ${syncedCount} registro${syncedCount > 1 ? 's' : ''} sincronizado${syncedCount > 1 ? 's' : ''}</strong></p>
-            ${failedCount > 0 ? `<p class="text-warning"><strong>⚠️ ${failedCount} registro${failedCount > 1 ? 's' : ''} falló${failedCount > 1 ? 'ron' : ''}</strong></p>` : ''}
-          </div>
-        `,
-        icon: 'success',
-        timer: 3000,
-        showConfirmButton: false
-      });
-    }
-  };
-
-  // Función para registro manual (guardar en localStorage)
-  const handleManualSave = (tardinessData) => {
+  // Función para manejar el registro manual (envío directo al servidor)
+  const handleManualSave = async (tardinessData) => {
     try {
-      // Guardar el registro manual
-      const savedRecord = addManualRecord(tardinessData);
+      console.log('📤 Enviando registro manual al servidor:', tardinessData);
       
-      // Actualizar registros pendientes
-      const pending = getPendingRecords();
-      setPendingRecords(pending);
+      // Preparar datos para envío
+      const formDataToSend = new FormData();
+      formDataToSend.append('motivo', tardinessData.motivo);
+      formDataToSend.append('rut', tardinessData.estudiante); // Ahora tardinessData.estudiante contiene solo el RUT
+      formDataToSend.append('curso', tardinessData.curso);
+      formDataToSend.append('trajoCertificado', tardinessData.trajoCertificado);
+      formDataToSend.append('horaManual', tardinessData.hora); // Enviar la hora manual
       
-      // Mostrar confirmación de éxito
-      Swal.fire({
-        title: 'Registro Manual Guardado',
-        html: `
-          <div class="text-start">
-            <p><strong>Estudiante:</strong> ${tardinessData.estudiante}</p>
-            <p><strong>Curso:</strong> ${tardinessData.curso}</p>
-            <p><strong>Hora:</strong> ${tardinessData.hora}</p>
-            <p><strong>Motivo:</strong> ${tardinessData.motivo}</p>
-          </div>
-          <hr>
-          <p class="text-info"><strong>📱 Registro guardado localmente</strong></p>
-          <p class="text-warning"><strong>⚠️ Se sincronizará automáticamente cuando vuelva la conexión</strong></p>
-        `,
-        icon: 'success',
-        timer: 4000,
-        showConfirmButton: false
+      if (tardinessData.certificadoAdjunto) {
+        formDataToSend.append('certificadoAdjunto', tardinessData.certificadoAdjunto);
+      }
+
+      console.log('📤 Datos preparados para envío:');
+      console.log('📤 RUT:', tardinessData.estudiante);
+      console.log('📤 Curso:', tardinessData.curso);
+      console.log('📤 Motivo:', tardinessData.motivo);
+      console.log('📤 Hora manual:', tardinessData.hora);
+
+      // Enviar al servidor
+      const response = await axios.post(`${API_BASE_URL}/api/tardiness`, formDataToSend, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        timeout: 30000
       });
-      
-      console.log('✅ Registro manual guardado exitosamente:', savedRecord);
+
+      if (response.status === 201) {
+        console.log('✅ Registro manual enviado exitosamente:', response.data);
+        
+        // Mostrar confirmación de éxito
+        Swal.fire({
+          title: '¡Registro Manual Completado!',
+          html: `
+            <div class="text-start">
+              <p><strong>RUT:</strong> ${tardinessData.estudiante}</p>
+              <p><strong>Curso:</strong> ${tardinessData.curso}</p>
+              <p><strong>Hora registrada:</strong> ${tardinessData.hora}</p>
+              <p><strong>Motivo:</strong> ${tardinessData.motivo}</p>
+              <hr>
+              <p class="text-success"><strong>✅ El correo se ha enviado al apoderado</strong></p>
+            </div>
+          `,
+          icon: 'success',
+          timer: 4000,
+          showConfirmButton: false
+        });
+      }
     } catch (error) {
-      console.error('❌ Error al guardar registro manual:', error);
+      console.error('❌ Error al enviar registro manual:', error);
       Swal.fire({
-        title: 'Error al Guardar',
-        text: 'Hubo un problema al guardar el registro manual. Intente nuevamente.',
+        title: 'Error al Registrar',
+        text: `No se pudo registrar el atraso: ${error.response?.data?.message || error.message}`,
         icon: 'error',
         confirmButtonText: 'Entendido'
       });
@@ -428,14 +359,6 @@ const RegisterTardiness = () => {
                   {isOnline ? 'Conectado' : 'Sin conexión'}
                 </div>
               </Col>
-              {pendingRecords.length > 0 && (
-                <Col md="auto">
-                  <div className="badge bg-warning fs-6">
-                    <FaExclamationTriangle className="me-2" />
-                    {pendingRecords.length} registro{pendingRecords.length > 1 ? 's' : ''} pendiente{pendingRecords.length > 1 ? 's' : ''}
-                  </div>
-                </Col>
-              )}
 
             </Row>
             
@@ -448,7 +371,7 @@ const RegisterTardiness = () => {
               </small>
             </div>
 
-            {/* Botones de acción adicionales */}
+            {/* Botón de registro manual */}
             <div className="mt-3">
               <Row className="justify-content-center">
                 <Col md="auto">
@@ -456,13 +379,11 @@ const RegisterTardiness = () => {
                     variant="outline-warning" 
                     size="sm"
                     onClick={() => setShowManualModal(true)}
-                    disabled={!isOnline && !selectedStudent}
                   >
                     <FaExclamationTriangle className="me-1" />
                     Registro Manual
                   </Button>
                 </Col>
-
               </Row>
             </div>
           </div>

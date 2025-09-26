@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Modal, Form, Button, Alert, Row, Col } from 'react-bootstrap';
 import { FaWifi, FaClock, FaUser, FaFileAlt, FaExclamationTriangle } from 'react-icons/fa';
 import Swal from 'sweetalert2';
@@ -16,6 +16,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
   });
   const [students, setStudents] = useState([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const firstInputRef = useRef(null);
 
   // Obtener hora actual
   useEffect(() => {
@@ -27,6 +28,52 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
     });
     setFormData(prev => ({ ...prev, hora: horaActual }));
   }, []);
+
+  // Manejar foco y accesibilidad cuando el modal se abre
+  useEffect(() => {
+    if (show) {
+      // Función para corregir aria-hidden
+      const fixAriaHidden = () => {
+        const modalElement = document.querySelector('.modal.show[aria-hidden="true"]');
+        if (modalElement) {
+          modalElement.removeAttribute('aria-hidden');
+        }
+      };
+
+      // Pequeño delay para asegurar que el modal esté completamente renderizado
+      const timer = setTimeout(() => {
+        fixAriaHidden();
+        
+        // Enfocar el primer campo
+        if (firstInputRef.current) {
+          firstInputRef.current.focus();
+        }
+      }, 100);
+
+      // Observer para detectar cambios en el DOM y corregir aria-hidden automáticamente
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'aria-hidden') {
+            const target = mutation.target;
+            if (target.classList.contains('modal') && target.classList.contains('show') && target.getAttribute('aria-hidden') === 'true') {
+              target.removeAttribute('aria-hidden');
+            }
+          }
+        });
+      });
+
+      // Observar cambios en el modal
+      const modalElement = document.querySelector('.modal');
+      if (modalElement) {
+        observer.observe(modalElement, { attributes: true, attributeFilter: ['aria-hidden'] });
+      }
+      
+      return () => {
+        clearTimeout(timer);
+        observer.disconnect();
+      };
+    }
+  }, [show]);
 
   // Cargar estudiantes cuando se selecciona un curso
   useEffect(() => {
@@ -90,7 +137,10 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
       return;
     }
 
-    // Mostrar confirmación antes de proceder
+    // Cerrar el modal inmediatamente
+    onHide();
+    
+    // Mostrar confirmación después de cerrar el modal
     Swal.fire({
       title: '¿Confirmar Registro Manual?',
       html: `
@@ -103,7 +153,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
           ${formData.observaciones ? `<p><strong>Observaciones:</strong> ${formData.observaciones}</p>` : ''}
         </div>
         <hr>
-        <p class="text-warning"><strong>⚠️ Recuerde:</strong> Este registro se sincronizará cuando vuelva la conexión a internet.</p>
+        <p class="text-info"><strong>ℹ️ Este registro se enviará inmediatamente al servidor</strong></p>
       `,
       icon: 'question',
       showCancelButton: true,
@@ -116,24 +166,11 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
       if (result.isConfirmed) {
         // Proceder con el registro
         const atrasoManual = {
-          id: Date.now(), // ID único temporal
           ...formData,
-          timestamp: new Date().toISOString(),
-          sincronizado: false,
-          tipo: 'manual'
+          timestamp: new Date().toISOString()
         };
 
         onSave(atrasoManual);
-        onHide();
-        
-        // Mostrar confirmación de éxito
-        Swal.fire({
-          title: 'Registro Manual Completado',
-          text: 'El atraso ha sido registrado manualmente. Se sincronizará automáticamente cuando vuelva la conexión.',
-          icon: 'success',
-          timer: 3000,
-          showConfirmButton: false
-        });
         
         // Limpiar formulario
         setFormData({
@@ -145,24 +182,38 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
           certificadoAdjunto: null,
           observaciones: ''
         });
+      } else {
+        // Si cancela, volver a abrir el modal
+        onHide();
+        setTimeout(() => {
+          // Reabrir el modal después de un pequeño delay
+          // Esto se maneja desde el componente padre
+        }, 100);
       }
     });
   };
 
   return (
-    <Modal show={show} onHide={onHide} size="xl" centered>
+    <Modal 
+      show={show} 
+      onHide={onHide} 
+      size="xl" 
+      centered
+      aria-labelledby="manual-registration-title"
+      aria-describedby="manual-registration-description"
+    >
       <Modal.Header closeButton className="bg-warning text-dark">
-        <Modal.Title>
+        <Modal.Title id="manual-registration-title">
           <FaExclamationTriangle className="me-2" />
           Registro Manual de Atraso
         </Modal.Title>
       </Modal.Header>
       
       <Modal.Body>
-        <Alert variant="warning" className="mb-4">
+        <Alert variant="info" className="mb-4" id="manual-registration-description">
           <FaExclamationTriangle className="me-2" />
-          <strong>Sin conexión a internet</strong><br />
-          Complete el formulario para registrar el atraso manualmente.
+          <strong>Registro Manual de Atraso</strong><br />
+          Complete el formulario para registrar el atraso con la hora real de llegada.
         </Alert>
 
         <Form onSubmit={handleSubmit}>
@@ -174,10 +225,13 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
                   Curso *
                 </Form.Label>
                 <Form.Select 
+                  ref={firstInputRef}
                   name="curso" 
                   value={formData.curso} 
                   onChange={handleChange}
                   required
+                  aria-label="Seleccionar curso del estudiante"
+                  aria-describedby="curso-help"
                 >
                   <option value="">Seleccione un curso</option>
                   {courses.map((course) => (
@@ -199,12 +253,14 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
                   onChange={handleChange}
                   required
                   disabled={!formData.curso || loadingStudents}
+                  aria-label="Seleccionar estudiante"
+                  aria-describedby="estudiante-help"
                 >
                   <option value="">
                     {loadingStudents ? 'Cargando estudiantes...' : 'Seleccione un estudiante'}
                   </option>
                   {students.map((student) => (
-                    <option key={student._id} value={`${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno} (${student.rut})`}>
+                    <option key={student._id} value={student.rut}>
                       {student.nombres} {student.apellidosPaterno} {student.apellidosMaterno} - {student.rut}
                     </option>
                   ))}
@@ -226,6 +282,8 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
                   value={formData.hora}
                   onChange={handleChange}
                   required
+                  aria-label="Hora de llegada del estudiante"
+                  aria-describedby="hora-help"
                 />
               </Form.Group>
             </Col>
@@ -233,7 +291,14 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
             <Col lg={9} md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>Motivo *</Form.Label>
-                <Form.Select name="motivo" value={formData.motivo} onChange={handleChange} required>
+                <Form.Select 
+                  name="motivo" 
+                  value={formData.motivo} 
+                  onChange={handleChange} 
+                  required
+                  aria-label="Motivo del atraso"
+                  aria-describedby="motivo-help"
+                >
                   <option value="">Selecciona un motivo</option>
                   <option value="Retraso en transporte">Retraso en transporte</option>
                   <option value="Dificultades familiares imprevistas">Dificultades familiares imprevistas</option>
@@ -294,10 +359,18 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
       </Modal.Body>
       
       <Modal.Footer>
-        <Button variant="secondary" onClick={onHide}>
+        <Button 
+          variant="secondary" 
+          onClick={onHide}
+          aria-label="Cancelar registro manual"
+        >
           Cancelar
         </Button>
-        <Button variant="warning" onClick={handleSubmit}>
+        <Button 
+          variant="warning" 
+          onClick={handleSubmit}
+          aria-label="Registrar atraso manualmente"
+        >
           <FaExclamationTriangle className="me-1" />
           Registrar Manualmente
         </Button>
