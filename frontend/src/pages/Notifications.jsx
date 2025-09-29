@@ -114,6 +114,10 @@ Equipo Directivo`
       // Si hay filtro de fechas, usar el endpoint específico
       if (startDate && endDate && startDate.trim() && endDate.trim()) {
         url = `${API_BASE_URL}/api/notifications/students-with-tardiness-by-date?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+        console.log('🔍 FILTRO DE FECHAS ACTIVO:');
+        console.log('📅 Fecha inicio:', startDate);
+        console.log('📅 Fecha fin:', endDate);
+        console.log('🌐 URL del backend:', url);
       }
       
       const response = await fetch(url, {
@@ -132,6 +136,24 @@ Equipo Directivo`
         
         // Log para debugging - verificar consistencia
         console.log('=== DEBUGGING FRONTEND ===');
+        console.log('📊 Total de estudiantes recibidos del backend:', data.length);
+        
+        if (startDate && endDate) {
+          console.log('🔍 FILTRO DE FECHAS - RESULTADOS DEL BACKEND:');
+          console.log('📅 Rango solicitado:', `${startDate} a ${endDate}`);
+          console.log('👥 Estudiantes encontrados:', data.length);
+          
+          // Mostrar los primeros atrasos para verificar las fechas
+          data.forEach(student => {
+            if (student && student.rut && student.atrasos && student.atrasos.length > 0) {
+              console.log(`📋 Estudiante ${student.rut} (${student.nombres}):`, 
+                `${student.totalAtrasos} atrasos en el período`);
+              console.log('📅 Fechas de atrasos:', 
+                student.atrasos.map(a => a.fecha).slice(0, 3)); // Mostrar solo las primeras 3 fechas
+            }
+          });
+        }
+        
         data.forEach(student => {
           if (student && student.rut) {
             console.log(`Estudiante ${student.rut}: ${student.totalAtrasos || 0} atrasos, ${student.atrasos?.length || 0} en array atrasos`);
@@ -945,42 +967,20 @@ Equipo Directivo`
         // Si no coincide el filtro de puntualidad, retornar false inmediatamente
         if (!punctualityMatch) return false;
         
-        // Filtro por fechas si están establecidas
+        // Filtro por fechas: SOLO aplicar cuando NO se está usando el endpoint de fechas
+        // Si startDate y endDate están definidos, significa que el backend ya filtró por fechas
+        // Por lo tanto, no necesitamos filtrar nuevamente en el frontend
         let dateMatch = true;
-        if (startDate && endDate && startDate.trim() && endDate.trim()) {
-          try {
-            const startDateTime = new Date(startDate);
-            const endDateTime = new Date(endDate);
-            
-            // Validar que las fechas sean válidas
-            if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
-              dateMatch = true; // Si las fechas no son válidas, no aplicar filtro
-            } else {
-              endDateTime.setHours(23, 59, 59, 999); // Incluir todo el día final
-              
-              // Verificar si el estudiante tiene atrasos en el rango
-              if (student.atrasos && Array.isArray(student.atrasos)) {
-                dateMatch = student.atrasos.some(atraso => {
-                  if (!atraso || !atraso.fecha) return false;
-                  
-                  try {
-                    const atrasoDate = new Date(atraso.fecha);
-                    if (isNaN(atrasoDate.getTime())) return false;
-                    
-                    return atrasoDate >= startDateTime && atrasoDate <= endDateTime;
-                  } catch (error) {
-                    console.warn('Error procesando fecha de atraso:', error);
-                    return false;
-                  }
-                });
-              } else {
-                dateMatch = false; // Si no tiene atrasos, no coincide con el filtro de fechas
-              }
-            }
-          } catch (error) {
-            console.warn('Error en filtro de fechas:', error);
-            dateMatch = true; // En caso de error, no aplicar filtro
-          }
+        
+        // Solo aplicar filtro de fechas en el frontend si NO estamos usando el endpoint de fechas
+        // (es decir, cuando estamos mostrando datos históricos completos)
+        if (!startDate || !endDate) {
+          // No hay filtro de fechas activo, mostrar todos los estudiantes
+          dateMatch = true;
+        } else {
+          // Hay filtro de fechas activo, el backend ya filtró los datos
+          // No necesitamos filtrar nuevamente en el frontend
+          dateMatch = true;
         }
         
         return dateMatch;
@@ -1162,6 +1162,18 @@ Equipo Directivo`
                       </h6>
                       {/* Botones de acción integrados en el header */}
                       <div className="d-flex gap-2">
+                        <Button 
+                          variant="outline-info" 
+                          size="sm"
+                          onClick={() => {
+                            const today = new Date().toISOString().split('T')[0];
+                            setStartDate(today);
+                            setEndDate(today);
+                          }}
+                          className="shadow-sm"
+                        >
+                          📅 Hoy
+                        </Button>
                         {filteredStudents.length > 0 && (
                           <Button 
                             variant="outline-info" 
@@ -1272,6 +1284,7 @@ Equipo Directivo`
                             value={startDate || ''}
                             onChange={(e) => setStartDate(e.target.value)}
                             placeholder="Desde"
+                            max="2025-12-31"
                           />
                         </InputGroup>
                       </Col>
@@ -1286,6 +1299,7 @@ Equipo Directivo`
                             value={endDate || ''}
                             onChange={(e) => setEndDate(e.target.value)}
                             placeholder="Hasta"
+                            max="2025-12-31"
                           />
                         </InputGroup>
                       </Col>
@@ -1340,6 +1354,7 @@ Equipo Directivo`
                             minTardinessFilter ? `Atrasos (≥${minTardinessFilter})` : 
                             'Total Atrasos'}
                         </th>
+                        <th>Último Atraso</th>
                         <th>Concepto Último Atraso</th>
                         <th>Calificación Mensual</th>
                       </tr>
@@ -1364,6 +1379,20 @@ Equipo Directivo`
                             <Badge bg={getTardinessColor(student.totalAtrasos)}>
                               {student.totalAtrasos}
                             </Badge>
+                          </td>
+                          <td>
+                            {student.atrasos && student.atrasos.length > 0 ? (
+                              <div className="text-center">
+                                <div className="fw-bold text-primary">
+                                  {new Date(student.atrasos[0].fecha).toLocaleDateString('es-CL')}
+                                </div>
+                                <small className="text-muted">
+                                  {student.atrasos[0].hora}
+                                </small>
+                              </div>
+                            ) : (
+                              <small className="text-muted">N/A</small>
+                            )}
                           </td>
                           <td>
                             {student.atrasos && student.atrasos.length > 0 ? (

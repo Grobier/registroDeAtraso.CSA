@@ -128,14 +128,22 @@ router.get('/students-with-tardiness-by-date', ensureAuthenticated, async (req, 
   try {
     const { startDate, endDate } = req.query;
     
+    console.log('🔍 FILTRO DE FECHAS - BACKEND:');
+    console.log('📅 startDate recibido:', startDate);
+    console.log('📅 endDate recibido:', endDate);
+    
     if (!startDate || !endDate) {
       return res.status(400).json({ message: 'Fecha de inicio y fin son requeridas' });
     }
 
-    // Crear fechas de inicio y fin
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    end.setHours(23, 59, 59, 999); // Incluir todo el día final
+    // Crear fechas de inicio y fin con zona horaria de Chile
+    const start = new Date(startDate + 'T00:00:00.000-03:00'); // Chile timezone
+    const end = new Date(endDate + 'T23:59:59.999-03:00'); // Chile timezone
+    
+    console.log('🕐 Fecha inicio procesada:', start);
+    console.log('🕐 Fecha inicio UTC:', start.toISOString());
+    console.log('🕐 Fecha fin procesada:', end);
+    console.log('🕐 Fecha fin UTC:', end.toISOString());
 
     // Obtener todos los estudiantes
     const allStudents = await Student.find();
@@ -179,6 +187,39 @@ router.get('/students-with-tardiness-by-date', ensureAuthenticated, async (req, 
     const validStudents = studentsWithTardiness
       .filter(student => student !== null)
       .sort((a, b) => b.totalAtrasos - a.totalAtrasos);
+
+    console.log('📊 RESULTADOS DE LA CONSULTA:');
+    console.log('👥 Total de estudiantes con atrasos en el período:', validStudents.length);
+    
+    // Mostrar algunos ejemplos de los atrasos encontrados
+    validStudents.slice(0, 3).forEach(student => {
+      console.log(`📋 ${student.nombres} (${student.rut}): ${student.totalAtrasos} atrasos`);
+      if (student.atrasos && student.atrasos.length > 0) {
+        console.log('   📅 Fechas:', student.atrasos.map(a => a.fecha).slice(0, 2));
+      }
+    });
+
+    // DEBUG: Mostrar todas las fechas únicas en la base de datos
+    const allTardiness = await Tardiness.find({}).select('fecha studentRut').limit(20).sort({ fecha: -1 });
+    console.log('🔍 FECHAS REALES EN LA BASE DE DATOS (últimas 20):');
+    allTardiness.forEach(t => {
+      console.log('   📅', t.fecha, '- RUT:', t.studentRut);
+    });
+
+    // DEBUG: Verificar si hay atrasos específicamente en el rango solicitado
+    const tardinessInRange = await Tardiness.find({
+      fecha: {
+        $gte: start,
+        $lte: end
+      }
+    }).select('fecha studentRut').limit(10);
+    
+    console.log('🎯 ATRASOS ENCONTRADOS EN EL RANGO SOLICITADO:');
+    console.log(`   📅 Rango: ${start.toISOString()} a ${end.toISOString()}`);
+    console.log(`   📊 Total encontrados: ${tardinessInRange.length}`);
+    tardinessInRange.forEach(t => {
+      console.log('   ✅', t.fecha, '- RUT:', t.studentRut);
+    });
 
     res.json(validStudents);
   } catch (error) {
