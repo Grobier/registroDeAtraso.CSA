@@ -1,5 +1,5 @@
 // src/pages/Notifications.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Container, Row, Col, Card, Button, Table, Form, Alert, Spinner, Badge, Breadcrumb, InputGroup, Pagination, Modal } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaEnvelope, FaUsers, FaChartBar, FaHistory, FaSearch, FaFilter, FaCalendarAlt, FaFileExcel } from 'react-icons/fa';
@@ -9,6 +9,115 @@ import './Notifications.css';
 
 // Configuración de la API
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
+
+// Componente memoizado para filas de estudiantes - OPTIMIZACIÓN
+const StudentRow = memo(({ 
+  student, 
+  isSelected, 
+  onSelect, 
+  getTardinessColor, 
+  getConceptoColor, 
+  getConceptoLabel,
+  calculateMonthlyPunctuality,
+  getCurrentMonth,
+  getCurrentYear,
+  handleShowDetails,
+  handleShowPunctualityAnalysis 
+}) => {
+  // Memoizar la puntualidad mensual para evitar recálculos
+  const punctuality = useMemo(() => {
+    const currentMonth = getCurrentMonth();
+    const currentYear = getCurrentYear();
+    return calculateMonthlyPunctuality(student, currentMonth, currentYear);
+  }, [student, getCurrentMonth, getCurrentYear, calculateMonthlyPunctuality]);
+
+  return (
+    <tr>
+      <td>
+        <Form.Check
+          type="checkbox"
+          checked={isSelected}
+          onChange={(e) => onSelect(student.rut, e.target.checked)}
+        />
+      </td>
+      <td>{student.rut}</td>
+      <td>
+        {student.nombres} {student.apellidosPaterno} {student.apellidosMaterno}
+      </td>
+      <td>{student.curso}</td>
+      <td>{student.correoApoderado}</td>
+      <td>
+        <Badge bg={getTardinessColor(student.totalAtrasos)}>
+          {student.totalAtrasos}
+        </Badge>
+      </td>
+      <td>
+        {student.atrasos && student.atrasos.length > 0 ? (
+          <div className="text-center">
+            <div className="fw-bold text-primary">
+              {new Date(student.atrasos[0].fecha).toLocaleDateString('es-CL')}
+            </div>
+            <small className="text-muted">
+              {student.atrasos[0].hora}
+            </small>
+          </div>
+        ) : (
+          <small className="text-muted">N/A</small>
+        )}
+      </td>
+      <td>
+        {student.atrasos && student.atrasos.length > 0 ? (
+          <div className="d-flex align-items-center gap-2">
+            <Badge 
+              bg={getConceptoColor(student.atrasos[0].concepto)}
+              style={{ cursor: 'pointer' }}
+              title="Click para ver todos los conceptos de atrasos"
+            >
+              {getConceptoLabel(student.atrasos[0].concepto)}
+            </Badge>
+
+            <Button
+              variant="outline-primary"
+              size="sm"
+              onClick={() => handleShowDetails(student)}
+              title="Ver todos los conceptos"
+              style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+            >
+              Ver
+            </Button>
+          </div>
+        ) : (
+          <small className="text-muted">N/A</small>
+        )}
+      </td>
+      <td>
+        <div className="text-center">
+          <Badge 
+            bg={punctuality.color} 
+            className="mb-1 d-block"
+            style={{ fontSize: '0.8rem' }}
+          >
+            {punctuality.percentage}%
+          </Badge>
+          <div className="small text-muted mb-1">
+            {punctuality.grade}
+          </div>
+          <Button
+            variant="outline-primary"
+            size="sm"
+            onClick={() => handleShowPunctualityAnalysis(student)}
+            title="Ver análisis detallado de puntualidad"
+            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+          >
+            📊
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+StudentRow.displayName = 'StudentRow';
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -37,21 +146,25 @@ Atentamente,
 Equipo Directivo`
   });
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [stats, setStats] = useState({
-    totalStudents: 0,
-    totalTardiness: 0,
-    averageTardiness: 0,
-    criticalCases: 0
-  });
   
   // Estados para filtro y paginación
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [minTardinessFilter, setMinTardinessFilter] = useState('');
   const [punctualityFilter, setPunctualityFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [studentsPerPage] = useState(10);
+
+  // Debounce para búsqueda - OPTIMIZACIÓN
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Generar opciones de meses
   const months = [
@@ -164,24 +277,7 @@ Equipo Directivo`
         setStudents(data);
         setSelectedStudents([]); // No seleccionar automáticamente
         
-        // Calcular estadísticas de forma segura
-        try {
-          const totalTardiness = data.reduce((sum, s) => sum + (s.totalAtrasos || 0), 0);
-          const criticalCases = data.filter(s => (s.totalAtrasos || 0) >= 5).length;
-          
-          setStats({
-            totalStudents: data.length,
-            totalTardiness,
-            criticalCases
-          });
-        } catch (statsError) {
-          console.warn('Error calculando estadísticas:', statsError);
-          setStats({
-            totalStudents: data.length,
-            totalTardiness: 0,
-            criticalCases: 0
-          });
-        }
+        // Las estadísticas se calcularán con useMemo para optimizar rendimiento
       } else {
         const errorText = await response.text();
         console.error('Error del servidor:', response.status, errorText);
@@ -195,10 +291,18 @@ Equipo Directivo`
     }
   };
 
-  // Cargar estudiantes cuando cambie el filtro de mes
+  // Cargar estudiantes cuando cambie el filtro de mes - OPTIMIZADO
   useEffect(() => {
-    if (startDate && endDate) {
-      loadStudentsWithTardiness();
+    // Solo recargar si ambas fechas están definidas y son válidas
+    if (startDate && endDate && startDate.trim() && endDate.trim()) {
+      // Verificar que las fechas sean diferentes a las anteriores para evitar recargas innecesarias
+      const currentDateKey = `${startDate}-${endDate}`;
+      const lastDateKey = localStorage.getItem('lastDateFilter');
+      
+      if (currentDateKey !== lastDateKey) {
+        localStorage.setItem('lastDateFilter', currentDateKey);
+        loadStudentsWithTardiness();
+      }
     }
   }, [startDate, endDate]);
 
@@ -227,13 +331,13 @@ Equipo Directivo`
     loadStudentsWithTardiness();
   };
 
-  const handleStudentSelection = (rut, checked) => {
+  const handleStudentSelection = useCallback((rut, checked) => {
     if (checked) {
-      setSelectedStudents([...selectedStudents, rut]);
+      setSelectedStudents(prev => [...prev, rut]);
     } else {
-      setSelectedStudents(selectedStudents.filter(s => s !== rut));
+      setSelectedStudents(prev => prev.filter(s => s !== rut));
     }
-  };
+  }, []);
 
   const handleSelectAll = (checked) => {
     if (checked) {
@@ -265,8 +369,8 @@ Equipo Directivo`
     setShowConfirmationModal(false);
   };
 
-  // Abrir modal de detalles de conceptos
-  const handleShowDetails = (student) => {
+  // Abrir modal de detalles de conceptos - OPTIMIZADA
+  const handleShowDetails = useCallback((student) => {
     console.log('🔍 DEBUGGING - Datos del estudiante:', student);
     console.log('🔍 DEBUGGING - Atrasos del estudiante:', student.atrasos);
     if (student.atrasos) {
@@ -280,13 +384,13 @@ Equipo Directivo`
     }
     setSelectedStudentDetails(student);
     setShowDetailsModal(true);
-  };
+  }, []);
 
-  // Abrir modal de análisis de puntualidad
-  const handleShowPunctualityAnalysis = (student) => {
+  // Abrir modal de análisis de puntualidad - OPTIMIZADA
+  const handleShowPunctualityAnalysis = useCallback((student) => {
     setSelectedStudentPunctuality(student);
     setShowPunctualityModal(true);
-  };
+  }, []);
 
 
   // Descargar certificado médico
@@ -728,8 +832,8 @@ Equipo Directivo`
     }
   };
 
-  // Función para calcular la calificación mensual de un estudiante
-  const calculateMonthlyGrade = (atrasos) => {
+  // Función para calcular la calificación mensual de un estudiante - OPTIMIZADA
+  const calculateMonthlyGrade = useCallback((atrasos) => {
     try {
       const currentMonth = new Date().getMonth() + 1;
       const currentYear = new Date().getFullYear();
@@ -785,7 +889,7 @@ Equipo Directivo`
         punctualDays: 0
       };
     }
-  };
+  }, []);
 
   // Generar y descargar Excel de estudiantes seleccionados
   const handleDownloadExcel = async () => {
@@ -1025,14 +1129,14 @@ Equipo Directivo`
     }
   };
 
-  const getTardinessColor = (count) => {
+  const getTardinessColor = useCallback((count) => {
     if (count >= 5) return 'danger';
     if (count >= 3) return 'warning';
     return 'info';
-  };
+  }, []);
 
-  // Función para obtener el color del badge según el concepto
-  const getConceptoColor = (concepto) => {
+  // Función para obtener el color del badge según el concepto - OPTIMIZADA
+  const getConceptoColor = useCallback((concepto) => {
     switch (concepto) {
       case 'presente':
         return 'success'; // Verde - cuenta como presente
@@ -1043,10 +1147,10 @@ Equipo Directivo`
       default:
         return 'secondary';
     }
-  };
+  }, []);
 
-  // Función para obtener la etiqueta del concepto
-  const getConceptoLabel = (concepto) => {
+  // Función para obtener la etiqueta del concepto - OPTIMIZADA
+  const getConceptoLabel = useCallback((concepto) => {
     switch (concepto) {
       case 'presente':
         return 'Presente';
@@ -1057,12 +1161,12 @@ Equipo Directivo`
       default:
         return concepto || 'Sin clasificar';
     }
-  };
+  }, []);
 
-  // Función para calcular el porcentaje de puntualidad mensual
-  const calculateMonthlyPunctuality = (student, month, year) => {
+  // Función para calcular el porcentaje de puntualidad mensual - OPTIMIZADA
+  const calculateMonthlyPunctuality = useCallback((student, month, year) => {
     try {
-      // Días hábiles por mes
+      // Días hábiles por mes - Cacheado para mejor rendimiento
       const workingDaysByMonth = {
         1: 20, 2: 20, 3: 20, 4: 21, 5: 19, 6: 12,
         7: 18, 8: 20, 9: 17, 10: 21, 11: 20, 12: 9
@@ -1070,7 +1174,7 @@ Equipo Directivo`
       
       // Obtener atrasos del mes específico
       if (!student.atrasos || !Array.isArray(student.atrasos)) {
-        return { percentage: 100, grade: 'Excelente', color: 'success', workingDays: workingDaysByMonth[month] || 0, tardiness: 0 };
+        return { percentage: 100, grade: 'Excelente', color: 'success', workingDays: workingDaysByMonth[month] || 0, tardiness: 0, punctualDays: workingDaysByMonth[month] || 0 };
       }
       
       const monthTardiness = student.atrasos.filter(atraso => {
@@ -1084,7 +1188,7 @@ Equipo Directivo`
       
       const workingDays = workingDaysByMonth[month] || 0;
       const tardinessCount = monthTardiness.length;
-      const punctualDays = workingDays - tardinessCount;
+      const punctualDays = Math.max(0, workingDays - tardinessCount);
       const percentage = workingDays > 0 ? Math.round((punctualDays / workingDays) * 100) : 100;
       
       // Determinar calificación
@@ -1115,20 +1219,20 @@ Equipo Directivo`
       console.warn('Error calculando puntualidad mensual:', error);
       return { percentage: 100, grade: 'Excelente', color: 'success', workingDays: 0, tardiness: 0, punctualDays: 0 };
     }
-  };
+  }, []);
 
-  // Función para obtener el mes actual
-  const getCurrentMonth = () => {
+  // Función para obtener el mes actual - OPTIMIZADA
+  const getCurrentMonth = useCallback(() => {
     return new Date().getMonth() + 1;
-  };
+  }, []);
 
-  // Función para obtener el año actual
-  const getCurrentYear = () => {
+  // Función para obtener el año actual - OPTIMIZADA
+  const getCurrentYear = useCallback(() => {
     return new Date().getFullYear();
-  };
+  }, []);
 
-  // Filtrar estudiantes por término de búsqueda y cantidad mínima de atrasos
-  const filteredStudents = React.useMemo(() => {
+  // Filtrar estudiantes por término de búsqueda y cantidad mínima de atrasos - OPTIMIZADO
+  const filteredStudents = useMemo(() => {
     if (!students || students.length === 0) return [];
     
     try {
@@ -1136,10 +1240,10 @@ Equipo Directivo`
         // Validar que el estudiante tenga las propiedades necesarias
         if (!student || typeof student !== 'object') return false;
         
-        // Filtro de búsqueda
+        // Filtro de búsqueda - OPTIMIZADO con debounce
         let searchMatch = true;
-        if (searchTerm && searchTerm.trim()) {
-          const searchLower = searchTerm.toLowerCase().trim();
+        if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+          const searchLower = debouncedSearchTerm.toLowerCase().trim();
           searchMatch = (
             (student.rut && student.rut.toString().toLowerCase().includes(searchLower)) ||
             (student.nombres && student.nombres.toLowerCase().includes(searchLower)) ||
@@ -1215,13 +1319,53 @@ Equipo Directivo`
       console.error('Error en filtrado de estudiantes:', error);
       return students; // En caso de error, retornar todos los estudiantes
     }
-  }, [students, searchTerm, startDate, endDate, minTardinessFilter]);
+  }, [students, debouncedSearchTerm, startDate, endDate, minTardinessFilter]);
 
-  // Calcular paginación
-  const indexOfLastStudent = currentPage * studentsPerPage;
-  const indexOfFirstStudent = indexOfLastStudent - studentsPerPage;
-  const currentStudents = filteredStudents.slice(indexOfFirstStudent, indexOfLastStudent);
-  const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
+  // Calcular estadísticas - OPTIMIZADO con useMemo
+  const stats = useMemo(() => {
+    if (!students || students.length === 0) {
+      return {
+        totalStudents: 0,
+        totalTardiness: 0,
+        criticalCases: 0
+      };
+    }
+
+    try {
+      const totalTardiness = students.reduce((sum, s) => sum + (s.totalAtrasos || 0), 0);
+      const criticalCases = students.filter(s => (s.totalAtrasos || 0) >= 5).length;
+      
+      return {
+        totalStudents: students.length,
+        totalTardiness,
+        criticalCases
+      };
+    } catch (statsError) {
+      console.warn('Error calculando estadísticas:', statsError);
+      return {
+        totalStudents: students.length,
+        totalTardiness: 0,
+        criticalCases: 0
+      };
+    }
+  }, [students]);
+
+  // Calcular paginación - OPTIMIZADO con useMemo
+  const paginationData = useMemo(() => {
+    const indexOfLastStudent = currentPage * studentsPerPage;
+    const indexOfFirstStudent = indexOfLastStudent - studentsPerPage;
+    const currentStudents = filteredStudents.slice(indexOfFirstStudent, indexOfLastStudent);
+    const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
+    
+    return {
+      indexOfLastStudent,
+      indexOfFirstStudent,
+      currentStudents,
+      totalPages
+    };
+  }, [currentPage, studentsPerPage, filteredStudents]);
+
+  const { indexOfLastStudent, indexOfFirstStudent, currentStudents, totalPages } = paginationData;
 
   // Cambiar página
   const handlePageChange = (pageNumber) => {
@@ -1609,97 +1753,20 @@ Equipo Directivo`
                     </thead>
                     <tbody>
                       {currentStudents.map((student) => (
-                        <tr key={student.rut}>
-                          <td>
-                            <Form.Check
-                              type="checkbox"
-                              checked={selectedStudents.includes(student.rut)}
-                              onChange={(e) => handleStudentSelection(student.rut, e.target.checked)}
-                            />
-                          </td>
-                          <td>{student.rut}</td>
-                          <td>
-                            {student.nombres} {student.apellidosPaterno} {student.apellidosMaterno}
-                          </td>
-                          <td>{student.curso}</td>
-                          <td>{student.correoApoderado}</td>
-                          <td>
-                            <Badge bg={getTardinessColor(student.totalAtrasos)}>
-                              {student.totalAtrasos}
-                            </Badge>
-                          </td>
-                          <td>
-                            {student.atrasos && student.atrasos.length > 0 ? (
-                              <div className="text-center">
-                                <div className="fw-bold text-primary">
-                                  {new Date(student.atrasos[0].fecha).toLocaleDateString('es-CL')}
-                                </div>
-                                <small className="text-muted">
-                                  {student.atrasos[0].hora}
-                                </small>
-                              </div>
-                            ) : (
-                              <small className="text-muted">N/A</small>
-                            )}
-                          </td>
-                          <td>
-                            {student.atrasos && student.atrasos.length > 0 ? (
-                              <div className="d-flex align-items-center gap-2">
-                                <Badge 
-                                  bg={getConceptoColor(student.atrasos[0].concepto)}
-                                  style={{ cursor: 'pointer' }}
-                                  title="Click para ver todos los conceptos de atrasos"
-                                >
-                                  {getConceptoLabel(student.atrasos[0].concepto)}
-                                </Badge>
-
-                                <Button
-                                  variant="outline-primary"
-                                  size="sm"
-                                  onClick={() => handleShowDetails(student)}
-                                  title="Ver todos los conceptos"
-                                  style={{ fontSize: '0.7rem', padding: '2px 6px' }}
-                                >
-                                  Ver
-                                </Button>
-                              </div>
-                            ) : (
-                              <small className="text-muted">N/A</small>
-                            )}
-                          </td>
-                          <td>
-                            {/* Calificación Mensual */}
-                            {(() => {
-                              const currentMonth = getCurrentMonth();
-                              const currentYear = getCurrentYear();
-                              const punctuality = calculateMonthlyPunctuality(student, currentMonth, currentYear);
-                              
-                              return (
-                                <div className="text-center">
-                                  <Badge 
-                                    bg={punctuality.color} 
-                                    className="mb-1 d-block"
-                                    style={{ fontSize: '0.8rem' }}
-                                  >
-                                    {punctuality.percentage}%
-                                  </Badge>
-                                  <div className="small text-muted mb-1">
-                                    {punctuality.grade}
-                                  </div>
-                                  <Button
-                                    variant="outline-primary"
-                                    size="sm"
-                                    onClick={() => handleShowPunctualityAnalysis(student)}
-                                    title="Ver análisis detallado de puntualidad"
-                                    style={{ fontSize: '0.7rem', padding: '2px 6px' }}
-                                  >
-                                    📊
-                                  </Button>
-                                </div>
-                              );
-                            })()}
-                          </td>
-                        </tr>
+                        <StudentRow 
+                          key={student.rut}
+                          student={student}
+                          isSelected={selectedStudents.includes(student.rut)}
+                          onSelect={handleStudentSelection}
+                          getTardinessColor={getTardinessColor}
+                          getConceptoColor={getConceptoColor}
+                          getConceptoLabel={getConceptoLabel}
+                          calculateMonthlyPunctuality={calculateMonthlyPunctuality}
+                          getCurrentMonth={getCurrentMonth}
+                          getCurrentYear={getCurrentYear}
+                          handleShowDetails={handleShowDetails}
+                          handleShowPunctualityAnalysis={handleShowPunctualityAnalysis}
+                        />
                       ))}
                     </tbody>
                   </Table>
