@@ -879,10 +879,14 @@ Equipo Directivo`
         
         // Obtener el último atraso
         let ultimoAtraso = 'N/A';
+        let horaUltimoAtraso = 'N/A';
+        let tieneCertificado = 'N/A';
         if (student.atrasos && student.atrasos.length > 0) {
           const ultimoAtrasoObj = student.atrasos[student.atrasos.length - 1];
           ultimoAtraso = ultimoAtrasoObj.fecha ? 
             new Date(ultimoAtrasoObj.fecha).toLocaleDateString('es-CL') : 'N/A';
+          horaUltimoAtraso = ultimoAtrasoObj.hora || 'N/A';
+          tieneCertificado = ultimoAtrasoObj.trajoCertificado ? 'Sí' : 'No';
         }
         
         return {
@@ -891,7 +895,9 @@ Equipo Directivo`
           'Nombre Completo': nombreCompleto,
           'Curso': curso,
           'Total Atrasos': totalAtrasos,
-          'Último Atraso': ultimoAtraso
+          'Último Atraso': ultimoAtraso,
+          'Hora Llegada': horaUltimoAtraso,
+          'Tiene Certificado': tieneCertificado
         };
       });
 
@@ -908,7 +914,9 @@ Equipo Directivo`
         { wch: 35 },  // Nombre Completo
         { wch: 10 },  // Curso
         { wch: 12 },  // Total Atrasos
-        { wch: 15 }   // Último Atraso
+        { wch: 15 },  // Último Atraso
+        { wch: 12 },  // Hora Llegada
+        { wch: 15 }   // Tiene Certificado
       ];
       ws['!cols'] = colWidths;
 
