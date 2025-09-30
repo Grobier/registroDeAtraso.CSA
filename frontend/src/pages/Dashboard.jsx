@@ -14,7 +14,7 @@ import autoTable from 'jspdf-autotable';
 import moment from 'moment-timezone';
 
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'http://localhost:5000' : '');
 
 
 const Dashboard = () => {
@@ -59,6 +59,7 @@ const Dashboard = () => {
 
   // Estados para el modal de estadísticas detalladas
   const [showTodayStatsModal, setShowTodayStatsModal] = useState(false);
+  const [todayStats, setTodayStats] = useState(null);
 
   // Estado para el reloj
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -456,12 +457,35 @@ const Dashboard = () => {
     }
   }, [tardiness]);
 
-  // useEffect para actualizar el conteo de atrasos de hoy según statsByDay
+  // useEffect para actualizar el conteo de atrasos de hoy usando endpoint específico
   useEffect(() => {
-    // Obtener la fecha de hoy en zona Chile
-    const hoyChile = moment().tz('America/Santiago').format('YYYY-MM-DD');
-    const hoyObj = statsByDay.find(d => d._id === hoyChile);
-    setTodayCount(hoyObj ? hoyObj.total : 0);
+    const fetchTodayStats = async () => {
+      console.log('🔄 Iniciando fetchTodayStats...');
+      try {
+        console.log('🌐 Llamando a:', `${API_BASE_URL}/api/tardiness/statistics/today`);
+        const response = await axios.get(`${API_BASE_URL}/api/tardiness/statistics/today`, { 
+          withCredentials: true 
+        });
+        console.log('✅ Respuesta del endpoint:', response.data);
+        setTodayCount(response.data.stats.total);
+        setTodayStats(response.data); // Almacenar datos completos para el modal
+        console.log('📊 Atrasos de hoy establecidos en:', response.data.stats.total);
+      } catch (error) {
+        console.error('❌ Error obteniendo estadísticas de hoy:', error);
+        console.log('🔄 Usando método fallback...');
+        // Fallback al método anterior
+        const hoyChile = moment().tz('America/Santiago').format('YYYY-MM-DD');
+        console.log('📅 Fecha de hoy (Chile):', hoyChile);
+        const hoyObj = statsByDay.find(d => d._id === hoyChile);
+        console.log('📊 Objeto encontrado:', hoyObj);
+        const fallbackCount = hoyObj ? hoyObj.total : 0;
+        console.log('📊 Contador fallback:', fallbackCount);
+        setTodayCount(fallbackCount);
+        setTodayStats(null);
+      }
+    };
+    
+    fetchTodayStats();
   }, [statsByDay]);
 
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -1430,57 +1454,23 @@ const Dashboard = () => {
         </Modal.Header>
         <Modal.Body>
           {(() => {
-            // Filtrar atrasos del día actual
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
-            
-            const todayTardiness = tardiness.filter(record => {
-              const recordDate = new Date(record.fecha);
-              const recordDateStr = recordDate.toISOString().split('T')[0];
-              return recordDateStr === todayStr;
-            });
+            // Usar el estado de estadísticas de hoy si está disponible
+            if (todayStats) {
+              const stats = todayStats.stats;
+              const todayTardiness = todayStats.tardiness;
 
-            // Calcular estadísticas del día
-            const stats = {
-              total: todayTardiness.length,
-              withCertificate: todayTardiness.filter(r => r.trajoCertificado).length,
-              withoutCertificate: todayTardiness.filter(r => !r.trajoCertificado).length,
-              present: todayTardiness.filter(r => r.concepto === 'presente').length,
-              latePresent: todayTardiness.filter(r => r.concepto === 'atrasado-presente').length,
-              absent: todayTardiness.filter(r => r.concepto === 'ausente').length,
-              byCourse: {},
-              byHour: {}
-            };
-
-            // Agrupar por curso
-            todayTardiness.forEach(record => {
-              if (!stats.byCourse[record.curso]) {
-                stats.byCourse[record.curso] = 0;
-              }
-              stats.byCourse[record.curso]++;
-            });
-
-            // Agrupar por hora
-            todayTardiness.forEach(record => {
-              const hour = record.hora.split(':')[0];
-              if (!stats.byHour[hour]) {
-                stats.byHour[hour] = 0;
-              }
-              stats.byHour[hour]++;
-            });
-
-            if (todayTardiness.length === 0) {
-              return (
-                <div className="text-center p-5">
-                  <div className="text-success mb-4">
-                    <i className="fas fa-check-circle" style={{ fontSize: '4rem' }}></i>
+              if (stats.total === 0) {
+                return (
+                  <div className="text-center p-5">
+                    <div className="text-success mb-4">
+                      <i className="fas fa-check-circle" style={{ fontSize: '4rem' }}></i>
+                    </div>
+                    <h4 className="text-success mb-3">¡Excelente!</h4>
+                    <p className="text-muted mb-0 fs-5">No hay atrasos registrados hoy</p>
+                    <small className="text-muted">Todos los estudiantes llegaron a tiempo</small>
                   </div>
-                  <h4 className="text-success mb-3">¡Excelente!</h4>
-                  <p className="text-muted mb-0 fs-5">No hay atrasos registrados hoy</p>
-                  <small className="text-muted">Todos los estudiantes llegaron a tiempo</small>
-                </div>
-              );
-            }
+                );
+              }
 
             return (
               <div>
@@ -1662,7 +1652,16 @@ const Dashboard = () => {
                 </Row>
               </div>
             );
-          })()}
+          }
+
+          // Fallback si no hay datos de hoy
+          return (
+            <div className="text-center py-4">
+              <h5>Cargando estadísticas...</h5>
+              <p className="text-muted">Obteniendo datos del día actual.</p>
+            </div>
+          );
+        })()}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowTodayStatsModal(false)}>

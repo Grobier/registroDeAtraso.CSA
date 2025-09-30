@@ -391,6 +391,79 @@ router.get('/statistics', async (req, res) => {
   }
 });
 
+// 2.1. Obtener estadísticas del día actual
+router.get('/statistics/today', async (req, res) => {
+  try {
+    // Obtener fecha de hoy en zona horaria de Chile
+    const today = new Date();
+    const todayChile = new Date(today.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+    const todayStr = todayChile.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    console.log('📅 Obteniendo estadísticas para:', todayStr);
+    
+    // Obtener atrasos del día actual
+    const todayTardiness = await Tardiness.find({
+      fecha: {
+        $gte: new Date(todayStr + 'T00:00:00.000Z'),
+        $lt: new Date(todayStr + 'T23:59:59.999Z')
+      }
+    }).sort({ fecha: -1 });
+
+    console.log('📊 Atrasos encontrados para hoy:', todayTardiness.length);
+
+    // Obtener estudiantes únicos del día (para evitar duplicados)
+    const uniqueStudents = new Map();
+    todayTardiness.forEach(record => {
+      if (!uniqueStudents.has(record.studentRut)) {
+        uniqueStudents.set(record.studentRut, record);
+      }
+    });
+    
+    const uniqueTodayTardiness = Array.from(uniqueStudents.values());
+
+    // Calcular estadísticas del día (usando estudiantes únicos)
+    const stats = {
+      total: uniqueTodayTardiness.length, // Solo estudiantes únicos
+      totalRecords: todayTardiness.length, // Total de registros (incluyendo duplicados)
+      withCertificate: uniqueTodayTardiness.filter(r => r.trajoCertificado).length,
+      withoutCertificate: uniqueTodayTardiness.filter(r => !r.trajoCertificado).length,
+      present: uniqueTodayTardiness.filter(r => r.concepto === 'presente').length,
+      latePresent: uniqueTodayTardiness.filter(r => r.concepto === 'atrasado-presente').length,
+      absent: uniqueTodayTardiness.filter(r => r.concepto === 'ausente').length,
+      byCourse: {},
+      byHour: {}
+    };
+
+    // Agrupar por curso (usando estudiantes únicos)
+    uniqueTodayTardiness.forEach(record => {
+      if (!stats.byCourse[record.curso]) {
+        stats.byCourse[record.curso] = 0;
+      }
+      stats.byCourse[record.curso]++;
+    });
+
+    // Agrupar por hora (usando estudiantes únicos)
+    uniqueTodayTardiness.forEach(record => {
+      const hour = record.hora.split(':')[0];
+      if (!stats.byHour[hour]) {
+        stats.byHour[hour] = 0;
+      }
+      stats.byHour[hour]++;
+    });
+
+    res.json({
+      date: todayStr,
+      stats,
+      tardiness: uniqueTodayTardiness, // Solo estudiantes únicos para el frontend
+      totalRecords: todayTardiness.length, // Total de registros (para debugging)
+      uniqueStudents: uniqueTodayTardiness.length // Estudiantes únicos (para debugging)
+    });
+  } catch (error) {
+    console.error("Error en estadísticas del día:", error);
+    res.status(500).json({ error: "Error en el servidor" });
+  }
+});
+
 // 3. Enviar reporte mensual a los apoderados
 router.get('/monthly-report', async (req, res) => {
   try {

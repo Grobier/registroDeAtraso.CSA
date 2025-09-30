@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Button, Table, Form, Alert, Spinner, Badge, Breadcrumb, InputGroup, Pagination, Modal } from 'react-bootstrap';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaEnvelope, FaUsers, FaChartBar, FaHistory, FaSearch, FaFilter, FaCalendarAlt } from 'react-icons/fa';
+import { FaEnvelope, FaUsers, FaChartBar, FaHistory, FaSearch, FaFilter, FaCalendarAlt, FaFileExcel } from 'react-icons/fa';
+import * as XLSX from 'xlsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './Notifications.css';
 
 // Configuración de la API
-const API_BASE_URL = ''; // Usar proxy de Vite para desarrollo local
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'http://localhost:5000' : '');
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -266,6 +267,17 @@ Equipo Directivo`
 
   // Abrir modal de detalles de conceptos
   const handleShowDetails = (student) => {
+    console.log('🔍 DEBUGGING - Datos del estudiante:', student);
+    console.log('🔍 DEBUGGING - Atrasos del estudiante:', student.atrasos);
+    if (student.atrasos) {
+      student.atrasos.forEach((atraso, index) => {
+        console.log(`🔍 DEBUGGING - Atraso ${index}:`, {
+          concepto: atraso.concepto,
+          trajoCertificado: atraso.trajoCertificado,
+          certificadoAdjunto: atraso.certificadoAdjunto
+        });
+      });
+    }
     setSelectedStudentDetails(student);
     setShowDetailsModal(true);
   };
@@ -275,6 +287,7 @@ Equipo Directivo`
     setSelectedStudentPunctuality(student);
     setShowPunctualityModal(true);
   };
+
 
   // Descargar certificado médico
   const handleDownloadCertificate = async (filename) => {
@@ -715,6 +728,211 @@ Equipo Directivo`
     }
   };
 
+  // Función para calcular la calificación mensual de un estudiante
+  const calculateMonthlyGrade = (atrasos) => {
+    try {
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
+      // Días hábiles por mes (aproximado)
+      const workingDaysByMonth = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9];
+      const workingDays = workingDaysByMonth[currentMonth - 1] || 20;
+      
+      // Filtrar atrasos del mes actual
+      const monthlyTardiness = atrasos.filter(atraso => {
+        const atrasoDate = new Date(atraso.fecha);
+        return atrasoDate.getMonth() + 1 === currentMonth && 
+               atrasoDate.getFullYear() === currentYear;
+      });
+      
+      // Calcular porcentaje de puntualidad
+      const tardinessCount = monthlyTardiness.length;
+      const punctualDays = Math.max(0, workingDays - tardinessCount);
+      const percentage = workingDays > 0 ? Math.round((punctualDays / workingDays) * 100) : 100;
+      
+      // Determinar calificación
+      let grade, color;
+      if (percentage >= 90) {
+        grade = 'Excelente';
+        color = 'success';
+      } else if (percentage >= 75) {
+        grade = 'Bueno';
+        color = 'warning';
+      } else if (percentage >= 60) {
+        grade = 'Regular';
+        color = 'info';
+      } else {
+        grade = 'Necesita mejora';
+        color = 'danger';
+      }
+      
+      return {
+        percentage,
+        grade,
+        color,
+        workingDays,
+        tardiness: tardinessCount,
+        punctualDays
+      };
+    } catch (error) {
+      console.error('Error calculando calificación mensual:', error);
+      return {
+        percentage: 100,
+        grade: 'Excelente',
+        color: 'success',
+        workingDays: 0,
+        tardiness: 0,
+        punctualDays: 0
+      };
+    }
+  };
+
+  // Generar y descargar Excel de estudiantes seleccionados
+  const handleDownloadExcel = async () => {
+    try {
+      if (selectedStudents.length === 0) {
+        setMessage({ type: 'warning', text: 'Debe seleccionar al menos un estudiante para generar el Excel' });
+        return;
+      }
+
+      const selectedStudentsData = students.filter(student => 
+        student && selectedStudents.includes(student.rut)
+      );
+
+      console.log('🔍 Debug Excel - Estudiantes seleccionados:', selectedStudents);
+      console.log('🔍 Debug Excel - Total estudiantes:', students.length);
+      console.log('🔍 Debug Excel - Estudiantes filtrados:', selectedStudentsData.length);
+      console.log('🔍 Debug Excel - Primer estudiante:', selectedStudentsData[0]);
+
+      if (selectedStudentsData.length === 0) {
+        setMessage({ type: 'warning', text: 'No se encontraron datos válidos para generar el Excel' });
+        return;
+      }
+
+      // Generar Excel usando XLSX
+      await generateExcel(selectedStudentsData, 'estudiantes-seleccionados');
+      setMessage({ type: 'success', text: 'Excel generado y descargado exitosamente' });
+    } catch (error) {
+      console.error('Error generando Excel:', error);
+      const errorMessage = error.message || 'Error desconocido al generar el Excel';
+      setMessage({ type: 'danger', text: `Error al generar el Excel: ${errorMessage}` });
+    }
+  };
+
+  // Generar y descargar Excel de todos los estudiantes filtrados
+  const handleDownloadExcelAll = async () => {
+    try {
+      if (filteredStudents.length === 0) {
+        setMessage({ type: 'warning', text: 'No hay estudiantes filtrados para generar el Excel' });
+        return;
+      }
+
+      // Filtrar estudiantes válidos
+      const validStudents = filteredStudents.filter(student => 
+        student && student.rut && student.nombreCompleto
+      );
+
+      if (validStudents.length === 0) {
+        setMessage({ type: 'warning', text: 'No se encontraron datos válidos para generar el Excel' });
+        return;
+      }
+
+      // Generar Excel usando XLSX
+      await generateExcel(validStudents, 'reporte-filtros');
+      setMessage({ type: 'success', text: 'Excel generado y descargado exitosamente' });
+    } catch (error) {
+      console.error('Error generando Excel:', error);
+      const errorMessage = error.message || 'Error desconocido al generar el Excel';
+      setMessage({ type: 'danger', text: `Error al generar el Excel: ${errorMessage}` });
+    }
+  };
+
+  // Función para generar Excel institucional profesional
+  const generateExcel = async (studentsData, filename) => {
+    try {
+      console.log('🔍 Debug generateExcel - Datos recibidos:', studentsData);
+      console.log('🔍 Debug generateExcel - Tipo:', typeof studentsData);
+      console.log('🔍 Debug generateExcel - Es array:', Array.isArray(studentsData));
+      console.log('🔍 Debug generateExcel - Longitud:', studentsData?.length);
+      
+      if (studentsData && studentsData.length > 0) {
+        console.log('🔍 Debug generateExcel - Primer estudiante completo:', studentsData[0]);
+        console.log('🔍 Debug generateExcel - Campos disponibles:', Object.keys(studentsData[0]));
+      }
+      
+      // Validar datos de entrada
+      if (!studentsData || !Array.isArray(studentsData) || studentsData.length === 0) {
+        console.error('❌ Error: Datos inválidos para Excel');
+        throw new Error('No hay datos de estudiantes para generar el Excel');
+      }
+
+      // Crear datos para el Excel
+      const excelData = studentsData.map((student, index) => {
+        // Construir nombre completo desde los campos individuales
+        const nombreCompleto = student.nombres && student.apellidosPaterno && student.apellidosMaterno 
+          ? `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`
+          : student.nombreCompleto || student.nombres || 'N/A';
+        
+        const rut = student.rut || 'N/A';
+        const curso = student.curso || 'N/A';
+        const totalAtrasos = student.atrasos ? student.atrasos.length : (student.totalAtrasos || 0);
+        
+        // Obtener el último atraso
+        let ultimoAtraso = 'N/A';
+        if (student.atrasos && student.atrasos.length > 0) {
+          const ultimoAtrasoObj = student.atrasos[student.atrasos.length - 1];
+          ultimoAtraso = ultimoAtrasoObj.fecha ? 
+            new Date(ultimoAtrasoObj.fecha).toLocaleDateString('es-CL') : 'N/A';
+        }
+        
+        return {
+          'N°': index + 1,
+          'RUT': rut,
+          'Nombre Completo': nombreCompleto,
+          'Curso': curso,
+          'Total Atrasos': totalAtrasos,
+          'Último Atraso': ultimoAtraso
+        };
+      });
+
+      // Crear libro de trabajo
+      const wb = XLSX.utils.book_new();
+      
+      // Crear hoja de trabajo
+      const ws = XLSX.utils.json_to_sheet(excelData);
+
+      // Configurar anchos de columna
+      const colWidths = [
+        { wch: 5 },   // N°
+        { wch: 15 },  // RUT
+        { wch: 35 },  // Nombre Completo
+        { wch: 10 },  // Curso
+        { wch: 12 },  // Total Atrasos
+        { wch: 15 }   // Último Atraso
+      ];
+      ws['!cols'] = colWidths;
+
+      // Agregar hoja al libro
+      XLSX.utils.book_append_sheet(wb, ws, 'Estudiantes con Atrasos');
+
+      // Generar nombre de archivo con timestamp
+      const timestamp = new Date().toISOString().split('T')[0];
+      const safeFilename = filename.replace(/[^a-zA-Z0-9]/g, '-');
+      
+      // Descargar el archivo
+      try {
+        XLSX.writeFile(wb, `Informe-SaintArieli-${safeFilename}-${timestamp}.xlsx`);
+      } catch (error) {
+        console.warn('Error guardando Excel:', error);
+        XLSX.writeFile(wb, 'Informe-SaintArieli-Atrasos.xlsx');
+      }
+      
+    } catch (error) {
+      console.error('Error en generateExcel:', error);
+      throw new Error('Error al generar el Excel: ' + error.message);
+    }
+  };
+
   const handleSendEmails = async () => {
     if (selectedStudents.length === 0) {
       setMessage({ type: 'warning', text: 'Debe seleccionar al menos un estudiante' });
@@ -1114,6 +1332,7 @@ Equipo Directivo`
         </Row>
       )}
 
+
       {/* Lista de estudiantes */}
       <Row>
         <Col>
@@ -1140,15 +1359,15 @@ Equipo Directivo`
                 <Badge bg="primary" className="fs-6">
                   🎯 {filteredStudents.length} estudiante{filteredStudents.length !== 1 ? 's' : ''} encontrado{filteredStudents.length !== 1 ? 's' : ''}
                 </Badge>
-                <Button 
-                  variant="outline-primary" 
-                  size="sm" 
-                  onClick={loadStudentsWithTardiness}
-                  disabled={loading}
-                >
-                  {loading ? <Spinner animation="border" size="sm" /> : <FaHistory />}
-                  <span className="ms-2">Actualizar</span>
-                </Button>
+                        <Button 
+                          variant="outline-primary" 
+                          size="sm" 
+                          onClick={loadStudentsWithTardiness}
+                          disabled={loading}
+                        >
+                          {loading ? <Spinner animation="border" size="sm" /> : <FaHistory />}
+                          <span className="ms-2">Actualizar</span>
+                        </Button>
               </div>
             </Card.Header>
             <Card.Body>
@@ -1175,24 +1394,45 @@ Equipo Directivo`
                           📅 Hoy
                         </Button>
                         {filteredStudents.length > 0 && (
-                          <Button 
-                            variant="outline-info" 
-                            size="sm"
-                            onClick={() => handleDownloadPDFAll()}
-                            className="shadow-sm btn-pdf"
-                            disabled={loading}
-                          >
-                            {loading ? (
-                              <>
-                                <Spinner animation="border" size="sm" className="me-2" />
-                                Generando PDF...
-                              </>
-                            ) : (
-                              <>
-                                📄 PDF ({filteredStudents.length})
-                              </>
-                            )}
-                          </Button>
+                          <>
+                            <Button 
+                              variant="outline-info" 
+                              size="sm"
+                              onClick={() => handleDownloadPDFAll()}
+                              className="shadow-sm btn-pdf me-2"
+                              disabled={loading}
+                            >
+                              {loading ? (
+                                <>
+                                  <Spinner animation="border" size="sm" className="me-2" />
+                                  Generando PDF...
+                                </>
+                              ) : (
+                                <>
+                                  📄 PDF ({filteredStudents.length})
+                                </>
+                              )}
+                            </Button>
+                            <Button 
+                              variant="outline-success" 
+                              size="sm"
+                              onClick={() => handleDownloadExcelAll()}
+                              className="shadow-sm btn-excel"
+                              disabled={loading}
+                            >
+                              {loading ? (
+                                <>
+                                  <Spinner animation="border" size="sm" className="me-2" />
+                                  Generando Excel...
+                                </>
+                              ) : (
+                                <>
+                                  <FaFileExcel className="me-1" />
+                                  Excel ({filteredStudents.length})
+                                </>
+                              )}
+                            </Button>
+                          </>
                         )}
                         
                         {(searchTerm || startDate || endDate || minTardinessFilter) && (
@@ -1784,6 +2024,33 @@ Equipo Directivo`
                </>
              )}
            </Button>
+
+           {/* Botón de descarga Excel */}
+           <Button 
+             variant="success" 
+             size="lg"
+             onClick={handleDownloadExcel}
+             className="shadow-lg btn-excel"
+             disabled={loading}
+             style={{
+               borderRadius: '50px',
+               padding: '15px 25px',
+               fontSize: '1.1rem',
+               fontWeight: '600'
+             }}
+           >
+             {loading ? (
+               <>
+                 <Spinner animation="border" size="sm" className="me-2" />
+                 Generando Excel...
+               </>
+             ) : (
+               <>
+                 <FaFileExcel className="me-2" />
+                 Descargar Excel ({selectedStudents.length})
+               </>
+             )}
+           </Button>
            
            {/* Botón de envío de correo */}
            <Button 
@@ -1858,7 +2125,7 @@ Equipo Directivo`
                            ) : atraso.concepto === 'atrasado-presente' ? (
                              <div className="d-flex align-items-center gap-2">
                                <span className="text-success">✓ Sí</span>
-                               {atraso.certificadoAdjunto && (
+                               {atraso.trajoCertificado && atraso.certificadoAdjunto && (
                                  <Button 
                                    variant="outline-primary" 
                                    size="sm"
@@ -1868,6 +2135,11 @@ Equipo Directivo`
                                    📄 Descargar
                                  </Button>
                                  )}
+                               {atraso.trajoCertificado && !atraso.certificadoAdjunto && (
+                                 <small className="text-warning" title="El certificado fue reportado pero el archivo no está disponible">
+                                   ⚠️ Sin archivo
+                                 </small>
+                               )}
                                </div>
                            ) : atraso.concepto === 'presente' ? (
                              <span className="text-muted">No aplica</span>

@@ -130,6 +130,17 @@
   box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3);
 }
 
+/* Estilos para los botones de descarga Excel */
+.btn-excel {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+}
+
+.btn-excel:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+}
+
 /* Botones flotantes de acción */
 .position-fixed .btn {
   transition: all 0.3s ease;
