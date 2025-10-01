@@ -424,6 +424,10 @@ router.get('/statistics/today', async (req, res) => {
     const todayChile = new Date(today.toLocaleString("en-US", {timeZone: "America/Santiago"}));
     const todayStr = todayChile.toISOString().split('T')[0]; // YYYY-MM-DD
     
+    // Para debug: mostrar fecha actual del sistema
+    console.log('🕐 Fecha del sistema (UTC):', today.toISOString());
+    console.log('🕐 Fecha del sistema (Chile):', todayChile.toISOString());
+    
     console.log('📅 Obteniendo estadísticas para:', todayStr);
     console.log('🕐 Fecha actual completa:', todayChile.toISOString());
     
@@ -442,8 +446,8 @@ router.get('/statistics/today', async (req, res) => {
 
     console.log('📊 Atrasos encontrados para hoy:', todayTardiness.length);
     
-    // Si no hay datos para hoy O hay muy pocos (menos de 10), usar el día más reciente con datos
-    if (todayTardiness.length === 0 || todayTardiness.length < 10) {
+    // TEMPORAL: Siempre usar el día más reciente si hay menos de 100 registros para hoy
+    if (todayTardiness.length < 100) {
       console.log('⚠️ Pocos datos para hoy (' + todayTardiness.length + '), buscando el día más reciente...');
       const latestDate = sortedDates[0]; // La fecha más reciente
       const latestDateStr = new Date(latestDate).toISOString().split('T')[0];
