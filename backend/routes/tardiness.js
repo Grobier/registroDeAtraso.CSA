@@ -400,6 +400,12 @@ router.get('/statistics/today', async (req, res) => {
     const todayStr = todayChile.toISOString().split('T')[0]; // YYYY-MM-DD
     
     console.log('📅 Obteniendo estadísticas para:', todayStr);
+    console.log('🕐 Fecha actual completa:', todayChile.toISOString());
+    
+    // Primero, verificar qué fechas existen en la base de datos
+    const allDates = await Tardiness.distinct('fecha');
+    console.log('📋 Fechas disponibles en BD (últimas 10):', 
+      allDates.sort((a, b) => new Date(b) - new Date(a)).slice(0, 10));
     
     // Obtener atrasos del día actual
     const todayTardiness = await Tardiness.find({
@@ -410,6 +416,14 @@ router.get('/statistics/today', async (req, res) => {
     }).sort({ fecha: -1 });
 
     console.log('📊 Atrasos encontrados para hoy:', todayTardiness.length);
+    
+    // Si no hay datos para hoy, buscar los últimos registros
+    if (todayTardiness.length === 0) {
+      console.log('⚠️ No hay datos para hoy, buscando los últimos registros...');
+      const latestTardiness = await Tardiness.find().sort({ fecha: -1 }).limit(5);
+      console.log('📋 Últimos 5 registros encontrados:', 
+        latestTardiness.map(r => ({ fecha: r.fecha, studentRut: r.studentRut })));
+    }
 
     // Obtener estudiantes únicos del día (para evitar duplicados)
     const uniqueStudents = new Map();
