@@ -442,9 +442,9 @@ router.get('/statistics/today', async (req, res) => {
 
     console.log('📊 Atrasos encontrados para hoy:', todayTardiness.length);
     
-    // Si no hay datos para hoy, usar el día más reciente con datos
-    if (todayTardiness.length === 0) {
-      console.log('⚠️ No hay datos para hoy, buscando el día más reciente...');
+    // Si no hay datos para hoy O hay muy pocos (menos de 10), usar el día más reciente con datos
+    if (todayTardiness.length === 0 || todayTardiness.length < 10) {
+      console.log('⚠️ Pocos datos para hoy (' + todayTardiness.length + '), buscando el día más reciente...');
       const latestDate = sortedDates[0]; // La fecha más reciente
       const latestDateStr = new Date(latestDate).toISOString().split('T')[0];
       
