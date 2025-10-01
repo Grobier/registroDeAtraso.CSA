@@ -429,11 +429,11 @@ router.get('/statistics/today', async (req, res) => {
     
     // Primero, verificar qué fechas existen en la base de datos
     const allDates = await Tardiness.distinct('fecha');
-    console.log('📋 Fechas disponibles en BD (últimas 10):', 
-      allDates.sort((a, b) => new Date(b) - new Date(a)).slice(0, 10));
+    const sortedDates = allDates.sort((a, b) => new Date(b) - new Date(a));
+    console.log('📋 Fechas disponibles en BD (últimas 10):', sortedDates.slice(0, 10));
     
     // Obtener atrasos del día actual
-    const todayTardiness = await Tardiness.find({
+    let todayTardiness = await Tardiness.find({
       fecha: {
         $gte: new Date(todayStr + 'T00:00:00.000Z'),
         $lt: new Date(todayStr + 'T23:59:59.999Z')
@@ -441,6 +441,24 @@ router.get('/statistics/today', async (req, res) => {
     }).sort({ fecha: -1 });
 
     console.log('📊 Atrasos encontrados para hoy:', todayTardiness.length);
+    
+    // Si no hay datos para hoy, usar el día más reciente con datos
+    if (todayTardiness.length === 0) {
+      console.log('⚠️ No hay datos para hoy, buscando el día más reciente...');
+      const latestDate = sortedDates[0]; // La fecha más reciente
+      const latestDateStr = new Date(latestDate).toISOString().split('T')[0];
+      
+      console.log('🔄 Usando datos del día más reciente:', latestDateStr);
+      
+      todayTardiness = await Tardiness.find({
+        fecha: {
+          $gte: new Date(latestDateStr + 'T00:00:00.000Z'),
+          $lt: new Date(latestDateStr + 'T23:59:59.999Z')
+        }
+      }).sort({ fecha: -1 });
+      
+      console.log('📊 Atrasos encontrados para el día más reciente:', todayTardiness.length);
+    }
     
     // Si no hay datos para hoy, buscar los últimos registros
     if (todayTardiness.length === 0) {
