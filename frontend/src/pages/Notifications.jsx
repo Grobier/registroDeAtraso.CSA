@@ -33,33 +33,36 @@ const StudentRow = memo(({
 
   return (
     <tr>
-      <td>
+      <td style={{ textAlign: 'center', width: '40px' }}>
         <Form.Check
           type="checkbox"
           checked={isSelected}
           onChange={(e) => onSelect(student.rut, e.target.checked)}
+          style={{ margin: '0 auto' }}
         />
       </td>
       <td>{student.rut}</td>
-      <td>
+      <td className="text-truncate" style={{ maxWidth: '200px' }} title={`${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`}>
         {student.nombres} {student.apellidosPaterno} {student.apellidosMaterno}
       </td>
       <td>{student.curso}</td>
-      <td>{student.correoApoderado}</td>
+      <td className="text-truncate" style={{ maxWidth: '150px' }} title={student.correoApoderado}>
+        {student.correoApoderado}
+      </td>
       <td>
         <Badge bg={getTardinessColor(student.totalAtrasos)}>
           {student.totalAtrasos}
         </Badge>
       </td>
-      <td>
+      <td className="text-center" style={{ fontSize: '0.8rem' }}>
         {student.atrasos && student.atrasos.length > 0 ? (
-          <div className="text-center">
+          <div>
             <div className="fw-bold text-primary">
               {new Date(student.atrasos[0].fecha).toLocaleDateString('es-CL')}
             </div>
-            <small className="text-muted">
+            <div className="text-muted" style={{ fontSize: '0.75rem' }}>
               {student.atrasos[0].hora}
-            </small>
+            </div>
           </div>
         ) : (
           <small className="text-muted">N/A</small>
@@ -67,21 +70,20 @@ const StudentRow = memo(({
       </td>
       <td>
         {student.atrasos && student.atrasos.length > 0 ? (
-          <div className="d-flex align-items-center gap-2">
+          <div className="d-flex flex-column gap-1">
             <Badge 
               bg={getConceptoColor(student.atrasos[0].concepto)}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', fontSize: '0.7rem' }}
               title="Click para ver todos los conceptos de atrasos"
             >
               {getConceptoLabel(student.atrasos[0].concepto)}
             </Badge>
-
             <Button
               variant="outline-primary"
               size="sm"
               onClick={() => handleShowDetails(student)}
               title="Ver todos los conceptos"
-              style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+              style={{ fontSize: '0.65rem', padding: '1px 4px', lineHeight: '1' }}
             >
               Ver
             </Button>
@@ -90,16 +92,15 @@ const StudentRow = memo(({
           <small className="text-muted">N/A</small>
         )}
       </td>
-      <td>
-        <div className="text-center">
+      <td className="text-center" style={{ fontSize: '0.8rem' }}>
+        <div className="d-flex flex-column gap-1">
           <Badge 
             bg={punctuality.color} 
-            className="mb-1 d-block"
-            style={{ fontSize: '0.8rem' }}
+            style={{ fontSize: '0.7rem' }}
           >
             {punctuality.percentage}%
           </Badge>
-          <div className="small text-muted mb-1">
+          <div className="text-muted" style={{ fontSize: '0.7rem' }}>
             {punctuality.grade}
           </div>
           <Button
@@ -107,7 +108,7 @@ const StudentRow = memo(({
             size="sm"
             onClick={() => handleShowPunctualityAnalysis(student)}
             title="Ver análisis detallado de puntualidad"
-            style={{ fontSize: '0.7rem', padding: '2px 6px' }}
+            style={{ fontSize: '0.6rem', padding: '1px 4px', lineHeight: '1' }}
           >
             📊
           </Button>
@@ -1897,47 +1898,75 @@ Equipo Directivo`
                   <p className="text-muted mb-0">Obteniendo información de estudiantes</p>
                 </div>
               ) : (
-                <div className="table-responsive">
-                  <Table striped bordered hover size="lg" className="table-wide">
+                <div className="table-responsive" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                  <Table striped bordered hover size="sm" className="table-compact" style={{
+                    fontSize: '0.85rem',
+                    lineHeight: '1.2',
+                    marginBottom: '0'
+                  }}>
+                    <style jsx>{`
+                      .table-compact th,
+                      .table-compact td {
+                        padding: 0.4rem 0.3rem !important;
+                        vertical-align: middle;
+                      }
+                      .table-compact .badge {
+                        font-size: 0.7rem !important;
+                        padding: 0.25em 0.4em;
+                      }
+                      .table-compact .btn {
+                        font-size: 0.65rem !important;
+                        padding: 0.2rem 0.4rem;
+                        line-height: 1;
+                      }
+                      .table-compact .form-check {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        margin: 0;
+                        padding: 0;
+                      }
+                      .table-compact .form-check-input {
+                        margin: 0;
+                        transform: scale(0.8);
+                      }
+                    `}</style>
                     <thead>
                       <tr>
-                        <th>
-                          <div className="d-flex align-items-center">
-                            <Form.Check
-                              type="checkbox"
-                              checked={
-                                filteredStudents.length > 0 && 
-                                filteredStudents.every(student => selectedStudents.includes(student.rut))
+                        <th style={{ width: '40px', textAlign: 'center' }}>
+                          <Form.Check
+                            type="checkbox"
+                            checked={
+                              filteredStudents.length > 0 && 
+                              filteredStudents.every(student => selectedStudents.includes(student.rut))
+                            }
+                            ref={(input) => {
+                              if (input) {
+                                input.indeterminate = 
+                                  filteredStudents.length > 0 && 
+                                  selectedStudents.some(rut => 
+                                    filteredStudents.some(student => student.rut === rut)
+                                  ) &&
+                                  !filteredStudents.every(student => selectedStudents.includes(student.rut));
                               }
-                              ref={(input) => {
-                                if (input) {
-                                  input.indeterminate = 
-                                    filteredStudents.length > 0 && 
-                                    selectedStudents.some(rut => 
-                                      filteredStudents.some(student => student.rut === rut)
-                                    ) &&
-                                    !filteredStudents.every(student => selectedStudents.includes(student.rut));
-                                }
-                              }}
-                              onChange={(e) => handleSelectAll(e.target.checked)}
-                            />
-                            <small className="text-muted ms-1" title="Selecciona solo los estudiantes visibles">
-                              (filtrados)
-                            </small>
-                          </div>
+                            }}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            title="Seleccionar todos los estudiantes visibles"
+                            style={{ margin: '0 auto' }}
+                          />
                         </th>
-                        <th>RUT</th>
-                        <th>Nombre Completo</th>
-                        <th>Curso</th>
-                        <th>Email Apoderado</th>
-                        <th>
+                        <th style={{ width: '80px' }}>RUT</th>
+                        <th style={{ width: '200px' }}>Nombre Completo</th>
+                        <th style={{ width: '60px' }}>Curso</th>
+                        <th style={{ width: '150px' }}>Email Apoderado</th>
+                        <th style={{ width: '80px' }}>
                           {startDate && endDate ? 'Atrasos del Período' : 
                             minTardinessFilter ? `Atrasos (≥${minTardinessFilter})` : 
                             'Total Atrasos'}
                         </th>
-                        <th>Último Atraso</th>
-                        <th>Concepto Último Atraso</th>
-                        <th>Calificación Mensual</th>
+                        <th style={{ width: '100px' }}>Último Atraso</th>
+                        <th style={{ width: '120px' }}>Concepto Último Atraso</th>
+                        <th style={{ width: '100px' }}>Calificación Mensual</th>
                       </tr>
                     </thead>
                     <tbody>
