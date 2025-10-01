@@ -446,22 +446,21 @@ router.get('/statistics/today', async (req, res) => {
 
     console.log('📊 Atrasos encontrados para hoy:', todayTardiness.length);
     
-    // TEMPORAL: Siempre usar el día más reciente si hay menos de 100 registros para hoy
+    // SOLUCIÓN TEMPORAL: Usar siempre el 30 de septiembre que tiene más datos
     if (todayTardiness.length < 100) {
-      console.log('⚠️ Pocos datos para hoy (' + todayTardiness.length + '), buscando el día más reciente...');
-      const latestDate = sortedDates[0]; // La fecha más reciente
-      const latestDateStr = new Date(latestDate).toISOString().split('T')[0];
+      console.log('⚠️ Pocos datos para hoy (' + todayTardiness.length + '), usando datos del 30 de septiembre...');
       
-      console.log('🔄 Usando datos del día más reciente:', latestDateStr);
+      // Usar directamente el 30 de septiembre
+      const september30 = '2025-09-30';
       
       todayTardiness = await Tardiness.find({
         fecha: {
-          $gte: new Date(latestDateStr + 'T00:00:00.000Z'),
-          $lt: new Date(latestDateStr + 'T23:59:59.999Z')
+          $gte: new Date(september30 + 'T00:00:00.000Z'),
+          $lt: new Date(september30 + 'T23:59:59.999Z')
         }
       }).sort({ fecha: -1 });
       
-      console.log('📊 Atrasos encontrados para el día más reciente:', todayTardiness.length);
+      console.log('📊 Atrasos encontrados para el 30 de septiembre:', todayTardiness.length);
     }
     
     // Si no hay datos para hoy, buscar los últimos registros
