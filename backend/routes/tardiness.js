@@ -423,6 +423,27 @@ router.get('/statistics/today', async (req, res) => {
       const latestTardiness = await Tardiness.find().sort({ fecha: -1 }).limit(5);
       console.log('📋 Últimos 5 registros encontrados:', 
         latestTardiness.map(r => ({ fecha: r.fecha, studentRut: r.studentRut })));
+      
+      // SOLUCIÓN TEMPORAL: Usar los datos de la fecha más reciente
+      if (latestTardiness.length > 0) {
+        console.log('🔄 Usando datos de la fecha más reciente:', latestTardiness[0].fecha);
+        const latestDate = new Date(latestTardiness[0].fecha);
+        const latestDateStr = latestDate.toISOString().split('T')[0];
+        
+        // Buscar atrasos de la fecha más reciente
+        const latestDateTardiness = await Tardiness.find({
+          fecha: {
+            $gte: new Date(latestDateStr + 'T00:00:00.000Z'),
+            $lt: new Date(latestDateStr + 'T23:59:59.999Z')
+          }
+        }).sort({ fecha: -1 });
+        
+        console.log('📊 Atrasos encontrados para la fecha más reciente:', latestDateTardiness.length);
+        
+        // Usar estos datos en lugar de los datos de hoy
+        todayTardiness.push(...latestDateTardiness);
+        console.log('✅ Total de atrasos a procesar:', todayTardiness.length);
+      }
     }
 
     // Obtener estudiantes únicos del día (para evitar duplicados)
