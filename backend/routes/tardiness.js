@@ -391,6 +391,31 @@ router.get('/statistics', async (req, res) => {
   }
 });
 
+// ENDPOINT TEMPORAL PARA DIAGNOSTICAR FECHAS
+router.get('/debug/dates', async (req, res) => {
+  try {
+    const allDates = await Tardiness.distinct('fecha');
+    const sortedDates = allDates.sort((a, b) => new Date(b) - new Date(a));
+    
+    const today = new Date();
+    const todayChile = new Date(today.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+    const todayStr = todayChile.toISOString().split('T')[0];
+    
+    res.json({
+      fechaActual: todayStr,
+      fechaActualCompleta: todayChile.toISOString(),
+      totalFechas: allDates.length,
+      ultimas10Fechas: sortedDates.slice(0, 10),
+      hoyExiste: sortedDates.some(date => 
+        new Date(date).toISOString().split('T')[0] === todayStr
+      )
+    });
+  } catch (error) {
+    console.error("Error en debug/dates:", error);
+    res.status(500).json({ error: "Error en el servidor" });
+  }
+});
+
 // 2.1. Obtener estadísticas del día actual
 router.get('/statistics/today', async (req, res) => {
   try {
