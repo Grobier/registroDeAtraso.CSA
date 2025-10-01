@@ -258,13 +258,19 @@ const Dashboard = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      console.log('🔄 Dashboard: Iniciando carga de datos...');
       const [statsRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/api/tardiness/statistics`, { withCredentials: true })
       ]);
 
-      setTardiness(statsRes.data.allTardiness);
-      setStudentStats(statsRes.data.statsByStudent);
-      setCourseStats(statsRes.data.statsByCourse);
+      console.log('✅ Dashboard: Respuesta del servidor:', statsRes.data);
+      console.log('📊 Dashboard: allTardiness length:', statsRes.data.allTardiness?.length || 0);
+      console.log('👥 Dashboard: statsByStudent length:', statsRes.data.statsByStudent?.length || 0);
+      console.log('🏫 Dashboard: statsByCourse length:', statsRes.data.statsByCourse?.length || 0);
+
+      setTardiness(statsRes.data.allTardiness || []);
+      setStudentStats(statsRes.data.statsByStudent || []);
+      setCourseStats(statsRes.data.statsByCourse || []);
       setStatsByDay(statsRes.data.statsByDay || []);
       
       axios.get(`${API_BASE_URL}/api/students`, { withCredentials: true })
@@ -366,8 +372,9 @@ const Dashboard = () => {
   ), [tardiness, appliedFilters]);
 
   useEffect(() => {
-    console.log("Filtros aplicados:", appliedFilters);
-    console.log("Total registros filtrados:", filteredTardiness.length);
+    console.log("🔍 Dashboard: Filtros aplicados:", appliedFilters);
+    console.log("📊 Dashboard: Total registros filtrados:", filteredTardiness.length);
+    console.log("📋 Dashboard: Primeros 3 registros filtrados:", filteredTardiness.slice(0, 3));
   }, [appliedFilters, filteredTardiness]);
 
   const getStudentName = (rut) => {
@@ -542,7 +549,9 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    console.log('📊 Dashboard: useEffect tardiness - tardiness.length:', tardiness.length);
     if (tardiness.length > 0) {
+      console.log('✅ Dashboard: Procesando', tardiness.length, 'registros de atrasos');
       calculateWeekdayStats();
       
       const totalMinutes = tardiness.reduce((acc, record) => {
@@ -550,6 +559,8 @@ const Dashboard = () => {
         return acc + (hours * 60 + minutes - 480);
       }, 0);
       setAverageDelay(totalMinutes / tardiness.length);
+    } else {
+      console.log('⚠️ Dashboard: No hay registros de atrasos para procesar');
     }
   }, [tardiness]);
 

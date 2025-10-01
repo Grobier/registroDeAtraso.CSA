@@ -119,10 +119,137 @@ const StudentRow = memo(({
 
 StudentRow.displayName = 'StudentRow';
 
+// Componente de Loading Fullscreen - OPTIMIZACIÓN UX
+const FullscreenLoading = memo(({ progress = 0 }) => {
+  return (
+    <div 
+      className="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+      style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(5px)',
+        zIndex: 9999
+      }}
+    >
+      <div className="text-center">
+        {/* Logo del colegio */}
+        <div className="mb-4">
+          <img 
+            src="/Logo.png" 
+            alt="Colegio Saint Arieli" 
+            style={{ 
+              width: '80px', 
+              height: '80px', 
+              objectFit: 'contain',
+              animation: 'logoFloat 2s ease-in-out infinite'
+            }}
+          />
+        </div>
+        
+        {/* Spinner personalizado */}
+        <div className="loading-spinner mb-3">
+          <div className="spinner-ring"></div>
+        </div>
+        
+        {/* Texto de carga */}
+        <h4 className="text-primary mb-2">Cargando Notificaciones</h4>
+        <p className="text-muted mb-0">
+          <span className="loading-dots">Obteniendo datos de estudiantes</span>
+        </p>
+        
+        {/* Barra de progreso real */}
+        <div className="progress mt-3" style={{ width: '250px', height: '6px' }}>
+          <div 
+            className="progress-bar bg-primary progress-bar-striped progress-bar-animated" 
+            role="progressbar" 
+            style={{ 
+              width: `${Math.min(progress, 100)}%`,
+              transition: 'width 0.5s ease-in-out'
+            }}
+          ></div>
+        </div>
+        <small className="text-muted mt-2 d-block">
+          {progress < 30 ? 'Conectando con el servidor...' :
+           progress < 60 ? 'Obteniendo datos de estudiantes...' :
+           progress < 90 ? 'Procesando información...' :
+           'Finalizando carga...'}
+        </small>
+      </div>
+      
+      {/* Estilos CSS integrados */}
+      <style jsx>{`
+        @keyframes logoFloat {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes progressBar {
+          0% { width: 0%; }
+          20% { width: 25%; }
+          40% { width: 45%; }
+          60% { width: 65%; }
+          80% { width: 85%; }
+          100% { width: 100%; }
+        }
+        
+        @keyframes loadingDots {
+          0%, 20% { content: ''; }
+          40% { content: '.'; }
+          60% { content: '..'; }
+          80%, 100% { content: '...'; }
+        }
+        
+        .loading-spinner {
+          position: relative;
+          width: 60px;
+          height: 60px;
+          margin: 0 auto;
+        }
+        
+        .spinner-ring {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          border: 4px solid transparent;
+          border-top: 4px solid #007bff;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+        
+        .spinner-ring::before {
+          content: '';
+          position: absolute;
+          top: -4px;
+          left: -4px;
+          right: -4px;
+          bottom: -4px;
+          border: 4px solid transparent;
+          border-top: 4px solid #6c757d;
+          border-radius: 50%;
+          animation: spin 1.5s linear infinite reverse;
+        }
+        
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        .loading-dots::after {
+          content: '';
+          animation: loadingDots 2s infinite;
+        }
+      `}</style>
+    </div>
+  );
+});
+
+FullscreenLoading.displayName = 'FullscreenLoading';
+
 const Notifications = () => {
   const navigate = useNavigate();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const [sending, setSending] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -197,7 +324,7 @@ Equipo Directivo`
         
         if (authResponse.ok) {
           console.log('✅ Usuario autenticado, cargando estudiantes...');
-          await loadStudentsWithTardiness();
+          await loadStudentsWithTardiness(true);
         } else {
           console.log('❌ Usuario no autenticado');
           setMessage({ type: 'warning', text: 'Debe iniciar sesión para acceder a esta funcionalidad' });
@@ -218,9 +345,33 @@ Equipo Directivo`
     }
   }, [navigate]);
 
-  const loadStudentsWithTardiness = async () => {
-    setLoading(true);
+  // Función para simular progreso de carga - OPTIMIZACIÓN UX
+  const simulateLoadingProgress = useCallback(() => {
+    setLoadingProgress(0);
+    const progressInterval = setInterval(() => {
+      setLoadingProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90; // Mantener en 90% hasta que termine la carga real
+        }
+        return prev + Math.random() * 15; // Incremento variable más realista
+      });
+    }, 200);
+    
+    return progressInterval;
+  }, []);
+
+  const loadStudentsWithTardiness = async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+      setInitialLoading(true);
+      setLoadingProgress(0);
+    } else {
+      setLoading(true);
+    }
     setMessage({ type: '', text: '' }); // Limpiar mensajes anteriores
+    
+    // Simular progreso para carga inicial
+    const progressInterval = isInitialLoad ? simulateLoadingProgress() : null;
     
     try {
       let url = `${API_BASE_URL}/api/notifications/students-with-tardiness`;
@@ -287,7 +438,22 @@ Equipo Directivo`
       console.error('Error de conexión:', error);
       setMessage({ type: 'danger', text: 'Error de conexión con el servidor' });
     } finally {
-      setLoading(false);
+      // Limpiar intervalo de progreso si existe
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+      
+      // Completar progreso y cerrar loading
+      if (isInitialLoad) {
+        setLoadingProgress(100);
+        // Pequeño delay para mostrar el 100%
+        setTimeout(() => {
+          setInitialLoading(false);
+          setLoadingProgress(0);
+        }, 500);
+      } else {
+        setLoading(false);
+      }
     }
   };
 
@@ -1415,6 +1581,11 @@ Equipo Directivo`
     }
   }, [showEmailModal, showConfirmationModal]);
 
+  // Mostrar loading fullscreen durante carga inicial
+  if (initialLoading) {
+    return <FullscreenLoading progress={loadingProgress} />;
+  }
+
   return (
     <Container fluid className="py-4">
       {/* Breadcrumb */}
@@ -1514,11 +1685,22 @@ Equipo Directivo`
                         <Button 
                           variant="outline-primary" 
                           size="sm" 
-                          onClick={loadStudentsWithTardiness}
+                          onClick={() => loadStudentsWithTardiness(false)}
                           disabled={loading}
                         >
-                          {loading ? <Spinner animation="border" size="sm" /> : <FaHistory />}
-                          <span className="ms-2">Actualizar</span>
+                          {loading ? (
+                            <>
+                              <div className="spinner-border spinner-border-sm me-2" role="status">
+                                <span className="visually-hidden">Cargando...</span>
+                              </div>
+                              Actualizando...
+                            </>
+                          ) : (
+                            <>
+                              <FaHistory className="me-2" />
+                              Actualizar
+                            </>
+                          )}
                         </Button>
               </div>
             </Card.Header>
@@ -1556,7 +1738,9 @@ Equipo Directivo`
                             >
                               {loading ? (
                                 <>
-                                  <Spinner animation="border" size="sm" className="me-2" />
+                                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                                    <span className="visually-hidden">Generando...</span>
+                                  </div>
                                   Generando PDF...
                                 </>
                               ) : (
@@ -1574,7 +1758,9 @@ Equipo Directivo`
                             >
                               {loading ? (
                                 <>
-                                  <Spinner animation="border" size="sm" className="me-2" />
+                                  <div className="spinner-border spinner-border-sm me-2" role="status">
+                                    <span className="visually-hidden">Generando...</span>
+                                  </div>
                                   Generando Excel...
                                 </>
                               ) : (
@@ -1701,11 +1887,14 @@ Equipo Directivo`
               </Row>
               
               {loading ? (
-                <div className="text-center py-4">
-                  <Spinner animation="border" role="status">
-                    <span className="visually-hidden">Cargando...</span>
-                  </Spinner>
-                  <p className="mt-2">Cargando estudiantes...</p>
+                <div className="text-center py-5">
+                  <div className="mb-3">
+                    <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
+                      <span className="visually-hidden">Cargando...</span>
+                    </div>
+                  </div>
+                  <h5 className="text-primary mb-2">Actualizando datos...</h5>
+                  <p className="text-muted mb-0">Obteniendo información de estudiantes</p>
                 </div>
               ) : (
                 <div className="table-responsive">
@@ -1958,7 +2147,9 @@ Equipo Directivo`
           >
             {sending ? (
               <>
-                <Spinner animation="border" size="sm" className="me-2" />
+                <div className="spinner-border spinner-border-sm me-2" role="status">
+                  <span className="visually-hidden">Enviando...</span>
+                </div>
                 Enviando...
               </>
             ) : (
@@ -2052,7 +2243,9 @@ Equipo Directivo`
           >
             {sending ? (
               <>
-                <Spinner animation="border" size="sm" className="me-1" />
+                <div className="spinner-border spinner-border-sm me-1" role="status">
+                  <span className="visually-hidden">Enviando...</span>
+                </div>
                 Enviando...
               </>
             ) : (
@@ -2090,7 +2283,9 @@ Equipo Directivo`
            >
              {loading ? (
                <>
-                 <Spinner animation="border" size="sm" className="me-2" />
+                 <div className="spinner-border spinner-border-sm me-2" role="status">
+                   <span className="visually-hidden">Generando...</span>
+                 </div>
                  Generando PDF...
                </>
              ) : (
@@ -2116,7 +2311,9 @@ Equipo Directivo`
            >
              {loading ? (
                <>
-                 <Spinner animation="border" size="sm" className="me-2" />
+                 <div className="spinner-border spinner-border-sm me-2" role="status">
+                   <span className="visually-hidden">Generando...</span>
+                 </div>
                  Generando Excel...
                </>
              ) : (
