@@ -20,8 +20,11 @@ router.get('/students-with-tardiness', ensureAuthenticated, async (req, res) => 
         const atrasos = await Tardiness.find({ studentRut: student.rut }).sort({ fecha: -1 });
         
         if (atrasos.length > 0) {
+          // Contar certificados adjuntos
+          const totalCertificados = atrasos.filter(a => a.certificadoAdjunto && a.certificadoAdjunto !== null).length;
+          
           // Log para debugging
-          console.log(`Estudiante ${student.rut}: ${atrasos.length} atrasos encontrados`);
+          console.log(`Estudiante ${student.rut}: ${atrasos.length} atrasos, ${totalCertificados} certificados`);
           
           return {
             rut: student.rut,
@@ -31,6 +34,7 @@ router.get('/students-with-tardiness', ensureAuthenticated, async (req, res) => 
             curso: student.curso,
             correoApoderado: student.correoApoderado,
             totalAtrasos: atrasos.length, // Usar consulta directa para consistencia
+            totalCertificados: totalCertificados, // Agregar conteo de certificados
             atrasos: atrasos.map(a => ({
               fecha: a.fecha,
               hora: a.hora,
@@ -89,6 +93,9 @@ router.get('/students-with-tardiness-by-month', ensureAuthenticated, async (req,
         }).sort({ fecha: -1 });
         
         if (atrasos.length > 0) {
+          // Contar certificados adjuntos
+          const totalCertificados = atrasos.filter(a => a.certificadoAdjunto && a.certificadoAdjunto !== null).length;
+          
           return {
             rut: student.rut,
             nombres: student.nombres,
@@ -97,6 +104,7 @@ router.get('/students-with-tardiness-by-month', ensureAuthenticated, async (req,
             curso: student.curso,
             correoApoderado: student.correoApoderado,
             totalAtrasos: atrasos.length, // Usar consulta directa para consistencia
+            totalCertificados: totalCertificados, // Agregar conteo de certificados
             atrasos: atrasos.map(a => ({
               fecha: a.fecha,
               hora: a.hora,
@@ -161,6 +169,9 @@ router.get('/students-with-tardiness-by-date', ensureAuthenticated, async (req, 
         }).sort({ fecha: -1 });
         
         if (atrasos.length > 0) {
+          // Contar certificados adjuntos
+          const totalCertificados = atrasos.filter(a => a.certificadoAdjunto && a.certificadoAdjunto !== null).length;
+          
           return {
             rut: student.rut,
             nombres: student.nombres,
@@ -169,6 +180,7 @@ router.get('/students-with-tardiness-by-date', ensureAuthenticated, async (req, 
             curso: student.curso,
             correoApoderado: student.correoApoderado,
             totalAtrasos: atrasos.length, // Usar consulta directa para consistencia
+            totalCertificados: totalCertificados, // Agregar conteo de certificados
             atrasos: atrasos.map(a => ({
               fecha: a.fecha,
               hora: a.hora,

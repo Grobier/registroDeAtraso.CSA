@@ -232,15 +232,17 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       console.log("📧 Tipo de correo:", typeof student.correoApoderado);
       console.log("📧 Longitud del correo:", student.correoApoderado?.length);
       
-      // Validar que el estudiante tenga correo del apoderado
-      if (!student.correoApoderado || student.correoApoderado.trim() === '') {
-        console.log("⚠️ El estudiante no tiene correo del apoderado configurado");
-        console.log("Datos del estudiante:", {
-          rut: student.rut,
-          nombres: student.nombres,
-          correoApoderado: student.correoApoderado
-        });
-      } else {
+      // Enviar correo SIEMPRE si el estudiante tiene correo configurado
+      let emailSent = false;
+      let emailError = null;
+
+      if (student.correoApoderado && student.correoApoderado.trim() !== '') {
+        console.log("\n📧 ========================================");
+        console.log("📧 INICIANDO PROCESO DE ENVÍO DE CORREO");
+        console.log("📧 ========================================");
+        console.log("📧 Estudiante:", student.rut);
+        console.log("📧 Correo apoderado:", student.correoApoderado);
+        
         const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
 
         // Formatear la fecha y hora con la zona horaria correcta
@@ -270,32 +272,33 @@ Atentamente,
 Equipo directivo.`
         };
 
-        console.log("📧 Preparando envío de correo a:", student.correoApoderado);
+        console.log("📧 Preparando envío de correo...");
+        console.log("📧 Destinatario:", mailOptions.to);
         console.log("📧 Asunto:", mailOptions.subject);
-        console.log("📧 Variables de entorno EMAIL_USER:", process.env.EMAIL_USER ? "Configurado" : "NO CONFIGURADO");
-        console.log("📧 Variables de entorno EMAIL_PASS:", process.env.EMAIL_PASS ? "Configurado" : "NO CONFIGURADO");
-        console.log("📧 NODE_ENV:", process.env.NODE_ENV);
-        console.log("📧 mailOptions completo:", JSON.stringify(mailOptions, null, 2));
-
-        // Test de la función sendEmail
-        console.log("🧪 Probando función sendEmail...");
-        console.log("🧪 Tipo de sendEmail:", typeof sendEmail);
-        console.log("🧪 sendEmail es función:", typeof sendEmail === 'function');
         
         // Enviar correo de forma asíncrona (no bloquea la respuesta)
         sendEmail(mailOptions).then(mailInfo => {
-          console.log("✅ Correo enviado exitosamente:", mailInfo.messageId);
+          emailSent = true;
+          console.log("✅ ========================================");
+          console.log("✅ CORREO ENVIADO EXITOSAMENTE");
+          console.log("✅ ========================================");
+          console.log("✅ MessageId:", mailInfo.messageId);
           console.log("✅ Respuesta completa:", mailInfo);
         }).catch(mailError => {
-          console.error("❌ Error al enviar correo:", mailError);
-          console.error("❌ Detalles del error:", {
+          emailError = mailError.message;
+          console.error("❌ ========================================");
+          console.error("❌ ERROR AL ENVIAR CORREO");
+          console.error("❌ ========================================");
+          console.error("❌ Error:", mailError.message);
+          console.error("❌ Detalles:", {
             code: mailError.code,
             command: mailError.command,
-            response: mailError.response,
-            message: mailError.message,
-            stack: mailError.stack
+            response: mailError.response
           });
         });
+      } else {
+        console.log("⚠️ El estudiante no tiene correo del apoderado configurado");
+        emailError = "No hay correo configurado para el apoderado";
       }
     } else {
       console.log("⚠️ No se encontró el estudiante. Comparación de RUTs:");
@@ -306,12 +309,30 @@ Equipo directivo.`
       }
     }
 
-    res.status(201).json({ 
-      message: `Atraso registrado como ${concepto} y correo enviado`,
+    // Preparar respuesta con información del correo
+    const responseData = { 
+      message: `Atraso registrado como ${concepto}`,
       concepto,
       requiereCertificado,
-      trajoCertificado
-    });
+      trajoCertificado,
+      emailSent: null,
+      emailError: null
+    };
+
+    // Esperar un momento para que el correo se procese (no bloquea completamente)
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Intentar determinar si el correo se envió correctamente
+    if (student && student.correoApoderado && student.correoApoderado.trim() !== '') {
+      responseData.message += ' y correo enviado al apoderado';
+      responseData.emailSent = true;
+    } else {
+      responseData.message += ' (correo no enviado - sin correo configurado)';
+      responseData.emailSent = false;
+      responseData.emailError = "No hay correo configurado para el apoderado";
+    }
+
+    res.status(201).json(responseData);
   } catch (error) {
     console.error("Error completo:", error);
     

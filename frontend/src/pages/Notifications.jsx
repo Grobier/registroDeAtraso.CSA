@@ -55,6 +55,11 @@ const StudentRow = memo(({
         </Badge>
       </td>
       <td className="text-center" style={{ fontSize: '0.8rem' }}>
+        <Badge bg={student.totalCertificados > 0 ? 'info' : 'secondary'}>
+          🏥 {student.totalCertificados || 0}
+        </Badge>
+      </td>
+      <td className="text-center" style={{ fontSize: '0.8rem' }}>
         {student.atrasos && student.atrasos.length > 0 ? (
           <div>
             <div className="fw-bold text-primary">
@@ -1964,6 +1969,7 @@ Equipo Directivo`
                             minTardinessFilter ? `Atrasos (≥${minTardinessFilter})` : 
                             'Total Atrasos'}
                         </th>
+                        <th style={{ width: '80px' }}>Certificados</th>
                         <th style={{ width: '100px' }}>Último Atraso</th>
                         <th style={{ width: '120px' }}>Concepto Último Atraso</th>
                         <th style={{ width: '100px' }}>Calificación Mensual</th>
@@ -2420,34 +2426,30 @@ Equipo Directivo`
                              {getConceptoLabel(atraso.concepto)}
                            </Badge>
                          </td>
-                         <td>
-                           {atraso.concepto === 'ausente' ? (
-                             <span className="text-danger">✗ No</span>
-                           ) : atraso.concepto === 'atrasado-presente' ? (
-                             <div className="d-flex align-items-center gap-2">
-                               <span className="text-success">✓ Sí</span>
-                               {atraso.trajoCertificado && atraso.certificadoAdjunto && (
-                                 <Button 
-                                   variant="outline-primary" 
-                                   size="sm"
-                                   onClick={() => handleDownloadCertificate(atraso.certificadoAdjunto)}
-                                   title="Descargar certificado médico"
-                                 >
-                                   📄 Descargar
-                                 </Button>
-                                 )}
-                               {atraso.trajoCertificado && !atraso.certificadoAdjunto && (
-                                 <small className="text-warning" title="El certificado fue reportado pero el archivo no está disponible">
-                                   ⚠️ Sin archivo
-                                 </small>
-                               )}
-                               </div>
-                           ) : atraso.concepto === 'presente' ? (
-                             <span className="text-muted">No aplica</span>
-                           ) : (
-                             <span className="text-muted">No aplica</span>
-                           )}
-                         </td>
+                        <td>
+                          {/* Mostrar botón de descarga si existe certificado adjunto */}
+                          {atraso.certificadoAdjunto ? (
+                            <div className="d-flex align-items-center gap-2">
+                              <span className="text-success">✓ Sí</span>
+                              <Button 
+                                variant="outline-primary" 
+                                size="sm"
+                                onClick={() => handleDownloadCertificate(atraso.certificadoAdjunto)}
+                                title="Ver/Descargar certificado médico"
+                              >
+                                📄 Ver Certificado
+                              </Button>
+                            </div>
+                          ) : atraso.concepto === 'ausente' ? (
+                            <span className="text-danger">✗ No</span>
+                          ) : atraso.concepto === 'atrasado-presente' ? (
+                            <span className="text-success">✓ Sí</span>
+                          ) : atraso.concepto === 'presente' ? (
+                            <span className="text-muted">No aplica</span>
+                          ) : (
+                            <span className="text-muted">No aplica</span>
+                          )}
+                        </td>
                          <td>{atraso.motivo}</td>
                        </tr>
                      ))}

@@ -272,10 +272,28 @@ const RegisterTardiness = () => {
           .then(response => {
             setIsLoading(false);
             setMessage(response.data.message);
+            // Determinar el estado del correo
+            let emailStatusHtml = '';
+            if (response.data.emailSent === true) {
+              emailStatusHtml = `
+                <p class="mb-1">
+                  <strong>📧 Notificación enviada:</strong> 
+                  <span class="badge bg-success">Correo enviado al apoderado ✓</span>
+                </p>
+              `;
+            } else if (response.data.emailSent === false) {
+              emailStatusHtml = `
+                <p class="mb-1">
+                  <strong>📧 Notificación:</strong> 
+                  <span class="badge bg-warning">No se envió correo - sin correo configurado</span>
+                </p>
+              `;
+            }
+
             Swal.fire({
               title: '¡Registrado!',
               icon: 'success',
-              timer: 4000,
+              timer: 5000,
               html: `
                 <div class="text-start">
                   <p class="mb-2">${response.data.message}</p>
@@ -293,6 +311,7 @@ const RegisterTardiness = () => {
                       }
                     </span>
                   </p>
+                  ${emailStatusHtml}
                   ${response.data.requiereCertificado ? 
                     `<p class="mb-1"><strong>Certificado:</strong> 
                       <span class="badge ${response.data.trajoCertificado ? 'bg-success' : 'bg-danger'}">
