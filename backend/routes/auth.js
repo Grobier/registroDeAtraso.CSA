@@ -65,10 +65,9 @@ router.post('/login', (req, res, next) => {
       console.log('req.user después del login:', req.user);
       console.log('req.isAuthenticated():', req.isAuthenticated());
       console.log('Cookies después del login:', req.cookies);
-      console.log('Headers de respuesta:', res.getHeaders());
-      
-      // Forzar el establecimiento de la cookie de sesión
-      res.setHeader('Set-Cookie', `connect.sid=${req.sessionID}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`);
+      console.log('Headers de respuesta (antes de enviar):', res.getHeaders());
+      // No forzamos la cookie manualmente. express-session se encarga de setear
+      // correctamente `connect.sid` con firma y atributos (SameSite/secure).
       
       // Aquí la sesión está establecida y Passport serializó el usuario
       res.json({

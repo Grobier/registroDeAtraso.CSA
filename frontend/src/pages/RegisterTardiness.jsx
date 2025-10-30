@@ -113,7 +113,8 @@ const RegisterTardiness = () => {
   // Función para manejar el registro manual (envío directo al servidor)
   const handleManualSave = async (tardinessData) => {
     try {
-      console.log('📤 Enviando registro manual al servidor:', tardinessData);
+      console.groupCollapsed('%c📤 Registro manual → envío', 'color:#0b7285;font-weight:bold');
+      console.log('Payload:', tardinessData);
       
       // Preparar datos para envío
       const formDataToSend = new FormData();
@@ -134,6 +135,7 @@ const RegisterTardiness = () => {
       console.log('📤 Hora manual:', tardinessData.hora);
 
       // Enviar al servidor
+      const t0 = performance.now();
       const response = await axios.post(`${API_BASE_URL}/api/tardiness`, formDataToSend, {
         withCredentials: true,
         headers: {
@@ -143,7 +145,15 @@ const RegisterTardiness = () => {
       });
 
       if (response.status === 201) {
-        console.log('✅ Registro manual enviado exitosamente:', response.data);
+        const dt = (performance.now() - t0).toFixed(0);
+        console.log('✅ Respuesta (201) en', dt, 'ms');
+        console.table({
+          status: response.status,
+          emailSent: response.data?.emailSent,
+          emailError: response.data?.emailError,
+          message: response.data?.message
+        });
+        console.groupEnd();
         
         // Mostrar confirmación de éxito
         Swal.fire({
@@ -164,7 +174,12 @@ const RegisterTardiness = () => {
         });
       }
     } catch (error) {
-      console.error('❌ Error al enviar registro manual:', error);
+      console.groupEnd();
+      console.error('❌ Error al enviar registro manual');
+      console.log('request url:', `${API_BASE_URL}/api/tardiness`);
+      console.log('status:', error.response?.status);
+      console.log('data:', error.response?.data);
+      console.log('message:', error.message);
       Swal.fire({
         title: 'Error al Registrar',
         text: `No se pudo registrar el atraso: ${error.response?.data?.message || error.message}`,
@@ -271,6 +286,11 @@ const RegisterTardiness = () => {
         })
           .then(response => {
             setIsLoading(false);
+            console.groupCollapsed('%c📬 Respuesta registro atraso', 'color:#2b8a3e;font-weight:bold');
+            console.log('status:', response.status);
+            console.log('data:', response.data);
+            console.table({ emailSent: response.data?.emailSent, emailError: response.data?.emailError });
+            console.groupEnd();
             setMessage(response.data.message);
             // Determinar el estado del correo
             let emailStatusHtml = '';
@@ -341,11 +361,16 @@ const RegisterTardiness = () => {
           })
           .catch(error => {
             setIsLoading(false);
-            console.error("Error al registrar atraso:", error);
+            console.groupCollapsed('%c🚨 Error registro atraso', 'color:#c92a2a;font-weight:bold');
+            console.log('request url:', `${API_BASE_URL}/api/tardiness`);
+            console.log('status:', error.response?.status);
+            console.log('data:', error.response?.data);
+            console.log('message:', error.message);
+            console.groupEnd();
             setMessage('Error al registrar atraso');
             Swal.fire({
               title: 'Error',
-              text: 'Error al registrar el atraso',
+              text: error.response?.data?.error || 'Error al registrar el atraso',
               icon: 'error'
             });
           });

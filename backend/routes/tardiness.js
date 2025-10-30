@@ -457,61 +457,21 @@ router.get('/statistics/today', async (req, res) => {
     const sortedDates = allDates.sort((a, b) => new Date(b) - new Date(a));
     console.log('📋 Fechas disponibles en BD (últimas 10):', sortedDates.slice(0, 10));
     
-    // Obtener atrasos del día actual
+    // Calcular límites del día en zona horaria de Chile
+    const startOfDayChile = moment.tz(todayStr + ' 00:00:00', 'YYYY-MM-DD HH:mm:ss', 'America/Santiago').toDate();
+    const endOfDayChile = moment.tz(todayStr + ' 23:59:59.999', 'YYYY-MM-DD HH:mm:ss.SSS', 'America/Santiago').toDate();
+
+    // Obtener atrasos del día actual usando los límites calculados
     let todayTardiness = await Tardiness.find({
       fecha: {
-        $gte: new Date(todayStr + 'T00:00:00.000Z'),
-        $lt: new Date(todayStr + 'T23:59:59.999Z')
+        $gte: startOfDayChile,
+        $lte: endOfDayChile
       }
     }).sort({ fecha: -1 });
 
     console.log('📊 Atrasos encontrados para hoy:', todayTardiness.length);
     
-    // SOLUCIÓN TEMPORAL: Usar siempre el 30 de septiembre que tiene más datos
-    if (todayTardiness.length < 100) {
-      console.log('⚠️ Pocos datos para hoy (' + todayTardiness.length + '), usando datos del 30 de septiembre...');
-      
-      // Usar directamente el 30 de septiembre
-      const september30 = '2025-09-30';
-      
-      todayTardiness = await Tardiness.find({
-        fecha: {
-          $gte: new Date(september30 + 'T00:00:00.000Z'),
-          $lt: new Date(september30 + 'T23:59:59.999Z')
-        }
-      }).sort({ fecha: -1 });
-      
-      console.log('📊 Atrasos encontrados para el 30 de septiembre:', todayTardiness.length);
-    }
-    
-    // Si no hay datos para hoy, buscar los últimos registros
-    if (todayTardiness.length === 0) {
-      console.log('⚠️ No hay datos para hoy, buscando los últimos registros...');
-      const latestTardiness = await Tardiness.find().sort({ fecha: -1 }).limit(5);
-      console.log('📋 Últimos 5 registros encontrados:', 
-        latestTardiness.map(r => ({ fecha: r.fecha, studentRut: r.studentRut })));
-      
-      // SOLUCIÓN TEMPORAL: Usar los datos de la fecha más reciente
-      if (latestTardiness.length > 0) {
-        console.log('🔄 Usando datos de la fecha más reciente:', latestTardiness[0].fecha);
-        const latestDate = new Date(latestTardiness[0].fecha);
-        const latestDateStr = latestDate.toISOString().split('T')[0];
-        
-        // Buscar atrasos de la fecha más reciente
-        const latestDateTardiness = await Tardiness.find({
-          fecha: {
-            $gte: new Date(latestDateStr + 'T00:00:00.000Z'),
-            $lt: new Date(latestDateStr + 'T23:59:59.999Z')
-          }
-        }).sort({ fecha: -1 });
-        
-        console.log('📊 Atrasos encontrados para la fecha más reciente:', latestDateTardiness.length);
-        
-        // Usar estos datos en lugar de los datos de hoy
-        todayTardiness.push(...latestDateTardiness);
-        console.log('✅ Total de atrasos a procesar:', todayTardiness.length);
-      }
-    }
+    // Eliminar fallbacks: solo devolver datos del día actual; si no hay, retornar vacío
 
     // Obtener estudiantes únicos del día (para evitar duplicados)
     const uniqueStudents = new Map();

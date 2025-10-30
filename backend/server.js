@@ -20,6 +20,8 @@ console.log("Zona horaria configurada:", process.env.TZ);
 console.log("Hora actual:", new Date().toLocaleString());
 
 const app = express();
+// Necesario para cookies 'secure' detrás de proxies/local
+app.set('trust proxy', 1);
 // Forzar desarrollo local para evitar problemas de CORS
 const isProduction = process.env.NODE_ENV === 'production';
 console.log('🔧 CORS Config - isProduction:', isProduction, '| NODE_ENV:', process.env.NODE_ENV);
@@ -45,11 +47,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// Configuración de CORS simplificada
+// Configuración de CORS: reflejar origen permitido dinámicamente
+const allowedOrigins = isProduction
+  ? ['https://registrodeatraso-csa.onrender.com', 'http://localhost:5000', 'http://localhost:5173', 'http://localhost:3000']
+  : ['http://localhost:5000', 'http://localhost:5173', 'http://localhost:3000'];
+
 app.use(cors({
-  origin: isProduction 
-    ? 'https://registrodeatraso-csa.onrender.com'
-    : ['http://localhost:5173', 'http://localhost:3000'],
+  origin: (origin, callback) => {
+    // Peticiones same-origin o desde herramientas sin origin
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(null, false);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
@@ -67,8 +76,10 @@ app.use(session({
     collectionName: 'sessions'
   }),
   cookie: {
-    sameSite: 'lax', // Cambiado temporalmente para debugging
-    secure: false, // Cambiado temporalmente para debugging
+    // Ajuste para entorno local con HTTP: permite que el navegador
+    // guarde y envíe la cookie de sesión correctamente
+    sameSite: 'lax',
+    secure: false,
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000 // 24 horas
   }
