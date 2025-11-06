@@ -9,6 +9,7 @@ import RegisterTardiness from './pages/RegisterTardiness';
 import StudentManagement from './pages/StudentManagement';
 import CreateUser from './pages/CreateUser';
 import Notifications from './pages/Notifications';
+import EnConstruccion from './pages/EnConstruccion';
 import Logout from './components/Logout';
 import Footer from './components/Footer';
 import { FaSun, FaMoon, FaTachometerAlt, FaPlusCircle, FaUsers, FaUserPlus, FaHistory, FaUserCog, FaEnvelope } from 'react-icons/fa';  // <-- Importa los íconos
@@ -237,12 +238,7 @@ function App() {
           <div className={`flex-grow-1 d-flex flex-column main-content-area${sidebarOpen ? (sidebarCollapsed ? ' sidebar-collapsed' : ' sidebar-expanded') : ''}`}>
             <Container className={!isAuthenticated ? 'p-0 m-0 mw-100 flex-grow-1' : 'mt-3 flex-grow-1'}>
               <Routes>
-            <Route
-              path="/"
-              element={
-                isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
-              }
-            />
+            <Route path="/" element={<EnConstruccion />} />
             <Route path="/login" element={<Login onLogin={handleLogin} />} />
             <Route
               path="/dashboard"
