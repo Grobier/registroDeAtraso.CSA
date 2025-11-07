@@ -12,6 +12,16 @@ const { sendEmail, verifyEmailConnection } = require('../config/emailConfig');
 require('dotenv').config();
 const { ensureAuthenticated } = require('../middlewares/auth');
 
+// Utilidades de RUT
+const normalizeRut = (rut) => rut?.toString()?.toLowerCase()?.replace(/[.\-]/g, '')?.trim();
+const buildRutFlexibleRegex = (normalizedRut) => {
+  const escaped = normalizedRut
+    .split('')
+    .map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('[.\\-]?');
+  return new RegExp(`^${escaped}$`, 'i');
+};
+
 // Configuración de Multer para subida de archivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -75,18 +85,20 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
   
   try {
     const { motivo, rut, curso, trajoCertificado, horaManual } = req.body;
+    const trajo = ['true', '1', 'on', true, 1, 'True', 'TRUE'].includes(trajoCertificado);
     const certificadoAdjunto = req.file ? req.file.filename : null;
     
     console.log("\n=== DATOS RECIBIDOS ===");
     console.log("Motivo:", motivo);
     console.log("RUT recibido:", rut);
     console.log("Curso:", curso);
-    console.log("Trajo certificado:", trajoCertificado);
+    console.log("Trajo certificado (raw):", trajoCertificado);
+    console.log("Trajo certificado (bool):", trajo);
     console.log("Hora manual:", horaManual);
     console.log("Certificado adjunto:", certificadoAdjunto);
     
-    // Limpiamos el RUT completamente
-    const searchRut = cleanRut(rut);
+    // Normalizar completamente el RUT (sin puntos ni guiones)
+    const searchRut = normalizeRut(rut);
     
     console.log("\n=== DIAGNÓSTICO DE RUT ===");
     console.log("RUT original:", rut);
@@ -136,7 +148,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
        requiereCertificado = false;
      } else {
        // Después de 9:30 AM
-       if (trajoCertificado) {
+      if (trajo) {
          // Con certificado → atrasado-presente
          concepto = 'atrasado-presente';
          requiereCertificado = true;
@@ -148,7 +160,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
        
        // Validar que si es después de 9:30 AM, debe traer certificado
        if (!trajoCertificado) {
-         return res.status(400).json({ 
+          /*return*/ res.status(400).json({ 
            error: "Después de las 9:30 AM es obligatorio presentar certificado médico para justificar el atraso." 
          });
        }
@@ -160,7 +172,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       motivo,
       studentRut: searchRut,
       curso,
-      trajoCertificado: trajoCertificado || false,
+      trajoCertificado: !!trajo,
       certificadoAdjunto: certificadoAdjunto || null,
       concepto,
       requiereCertificado
@@ -186,12 +198,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
     })));
 
     // Buscar el estudiante con múltiples estrategias de búsqueda
-    let student = await Student.findOne({
-      $or: [
-        { rut: searchRut },
-        { rut: { $regex: new RegExp(`^${searchRut}$`, 'i') } }
-      ]
-    });
+    let student = await Student.findOne({ rut: { $regex: buildRutFlexibleRegex(searchRut) } });
 
     // Si no se encuentra, intentar búsquedas más flexibles
     if (!student) {
@@ -314,7 +321,7 @@ Equipo directivo.`
       message: `Atraso registrado como ${concepto}`,
       concepto,
       requiereCertificado,
-      trajoCertificado,
+      trajoCertificado: !!trajo,
       emailSent: null,
       emailError: null
     };
@@ -523,6 +530,69 @@ router.get('/statistics/today', async (req, res) => {
   } catch (error) {
     console.error("Error en estadísticas del día:", error);
     res.status(500).json({ error: "Error en el servidor" });
+  }
+});
+
+// 2.2. Obtener estadísticas de la semana actual (CL)
+router.get('/statistics/week', async (req, res) => {
+  try {
+    const now = moment.tz('America/Santiago');
+    const startOfWeek = now.clone().startOf('isoWeek').toDate();
+    const endOfWeek = now.clone().endOf('isoWeek').toDate();
+
+    const weekTardiness = await Tardiness.find({
+      fecha: { $gte: startOfWeek, $lte: endOfWeek }
+    }).sort({ fecha: -1 });
+
+    // Estudiantes únicos en la semana
+    const uniqueStudents = new Set(weekTardiness.map(r => r.studentRut));
+    const stats = {
+      total: uniqueStudents.size,
+      totalRecords: weekTardiness.length
+    };
+
+    res.json({
+      range: {
+        start: startOfWeek.toISOString(),
+        end: endOfWeek.toISOString()
+      },
+      stats,
+      tardiness: weekTardiness
+    });
+  } catch (error) {
+    console.error('Error en estadísticas de la semana:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// 2.3. Obtener estadísticas del mes actual (CL)
+router.get('/statistics/month', async (req, res) => {
+  try {
+    const now = moment.tz('America/Santiago');
+    const startOfMonth = now.clone().startOf('month').toDate();
+    const endOfMonth = now.clone().endOf('month').toDate();
+
+    const monthTardiness = await Tardiness.find({
+      fecha: { $gte: startOfMonth, $lte: endOfMonth }
+    }).sort({ fecha: -1 });
+
+    const uniqueStudents = new Set(monthTardiness.map(r => r.studentRut));
+    const stats = {
+      total: uniqueStudents.size,
+      totalRecords: monthTardiness.length
+    };
+
+    res.json({
+      range: {
+        start: startOfMonth.toISOString(),
+        end: endOfMonth.toISOString()
+      },
+      stats,
+      tardiness: monthTardiness
+    });
+  } catch (error) {
+    console.error('Error en estadísticas del mes:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 

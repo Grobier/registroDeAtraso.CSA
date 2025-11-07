@@ -182,7 +182,7 @@ const FullscreenLoading = memo(({ progress = 0 }) => {
       </div>
       
       {/* Estilos CSS integrados */}
-      <style jsx>{`
+      <style>{`
         @keyframes logoFloat {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-10px); }
@@ -394,7 +394,7 @@ Equipo Directivo`
       const response = await fetch(url, {
         credentials: 'include'
       });
-      
+      console.log('HTTP status:', response.status, response.statusText);
       if (response.ok) {
         const data = await response.json();
         
@@ -568,23 +568,36 @@ Equipo Directivo`
   // Descargar certificado médico
   const handleDownloadCertificate = async (filename) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/tardiness/certificado/${filename}`, {
+      const safeName = encodeURIComponent(filename || '');
+      const url = `${API_BASE_URL}/api/tardiness/certificado/${safeName}`;
+      console.group('%cDescarga de certificado', 'color:#1a73e8;font-weight:bold');
+      console.log('API_BASE_URL:', API_BASE_URL);
+      console.log('Nombre original:', filename);
+      console.log('Nombre codificado (URL):', safeName);
+      console.log('URL final:', url);
+      const response = await fetch(url, {
         credentials: 'include'
       });
       
       if (response.ok) {
         // Crear un blob y descargar el archivo
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        const blobUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = blobUrl;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(blobUrl);
         document.body.removeChild(a);
+        console.log('Descarga iniciada correctamente.');
+        if (console.groupEnd) console.groupEnd();
       } else {
-        setMessage({ type: 'danger', text: 'Error al descargar el certificado' });
+        let serverMsg = '';
+        try { serverMsg = await response.text(); } catch (_) {}
+        console.warn('No OK. Detalle del servidor:', serverMsg || '(sin cuerpo)');
+        setMessage({ type: 'danger', text: `No se pudo descargar (HTTP ${response.status}). ${serverMsg || ''}`.trim() });
+        if (console.groupEnd) console.groupEnd();
       }
     } catch (error) {
       console.error('Error descargando certificado:', error);
@@ -1909,7 +1922,7 @@ Equipo Directivo`
                     lineHeight: '1.2',
                     marginBottom: '0'
                   }}>
-                    <style jsx>{`
+                    <style>{`
                       .table-compact th,
                       .table-compact td {
                         padding: 0.4rem 0.3rem !important;

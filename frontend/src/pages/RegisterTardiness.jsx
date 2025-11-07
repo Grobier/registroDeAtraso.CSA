@@ -341,7 +341,7 @@ const RegisterTardiness = () => {
                     : '<p class="mb-1 text-muted"><em>No se requiere certificado antes de las 9:30 AM</em></p>'
                   }
                   <p class="mb-0 mt-2"><small class="text-muted">
-                    ${response.data.concepto === 'atrasado-asistido' 
+                    ${response.data.concepto === 'atrasado-presente' 
                       ? 'El estudiante será contabilizado como presente' 
                       : 'El estudiante será contabilizado como ausente'
                     }
@@ -526,7 +526,7 @@ const RegisterTardiness = () => {
                 ) : (
                   <>
                     <strong>✅ INFORMACIÓN:</strong> Antes de las 9:30 AM no se requiere certificado médico. 
-                    El estudiante será registrado como "atrasado-asistido" y contará como presente.
+                    El estudiante será registrado como "atrasado-presente" y contará como presente.
                   </>
                 )}
               </small>
