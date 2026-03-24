@@ -337,6 +337,10 @@
   max-width: min(780px, calc(100vw - 2rem));
 }
 
+.student-form-modal {
+  max-width: min(860px, calc(100vw - 2rem)) !important;
+}
+
 .page-modal .modal-header,
 .page-modal .modal-footer {
   background: rgba(246, 250, 255, 0.94);

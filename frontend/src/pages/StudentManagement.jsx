@@ -605,7 +605,7 @@ const StudentManagement = () => {
         show={showModal} 
         onHide={() => setShowModal(false)}
         centered
-        dialogClassName="modal-dialog-centered"
+        dialogClassName="modal-dialog-centered student-form-modal"
         contentClassName="page-modal"
         style={{ marginTop: '5vh' }}
       >
