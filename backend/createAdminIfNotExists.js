@@ -1,28 +1,26 @@
 // backend/createAdminIfNotExists.js
 const User = require('./models/User');
-const bcrypt = require('bcrypt');
 
 async function createOrUpdateAdmin() {
   try {
-    const adminEmail = 'admin@example.com'; // Proporciona un correo válido
+    const adminEmail = 'admin@example.com';
     const adminUsername = 'admin';
-    const adminPassword = 'csa2025'; // Cambia la contraseña aquí
+    const adminPassword = 'csa2025';
 
-    // Verificar si el usuario administrador ya existe
-    let adminUser = await User.findOne({ role: 'admin' });
+    // Verificar si el usuario administrador ya existe por username
+    let adminUser = await User.findOne({ username: adminUsername });
     if (adminUser) {
-      // Actualizar la contraseña del administrador existente
-      const hashedPass = await bcrypt.hash(adminPassword, 10);
-      adminUser.password = hashedPass;
+      // Asignar en texto plano: el pre-save hook del modelo se encarga de hashear
+      adminUser.password = adminPassword;
+      adminUser.role = 'admin';
       await adminUser.save();
       console.log('Contraseña del administrador actualizada');
     } else {
-      // Crear un nuevo usuario administrador
-      const hashedPass = await bcrypt.hash(adminPassword, 10);
+      // User.create también dispara el pre-save hook
       await User.create({
         username: adminUsername,
-        password: hashedPass,
-        email: adminEmail, // Proporciona un correo válido
+        password: adminPassword,
+        email: adminEmail,
         role: 'admin',
       });
       console.log('Usuario administrador creado exitosamente');

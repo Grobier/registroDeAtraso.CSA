@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Form, Button, Modal, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Card, Table, Form, Button, Modal, Spinner, Alert, InputGroup } from 'react-bootstrap';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { FaEdit, FaTrash, FaFileExcel, FaUsers, FaGraduationCap, FaPlus, FaRedo, FaSearch, FaFilter, FaTimes } from 'react-icons/fa';
+import '../styles/PageTheme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
 
@@ -273,8 +275,9 @@ const StudentManagement = () => {
         }));
 
         // Enviar datos al servidor
-        await axios.post(`${API_BASE_URL}/api/students/bulk`, formattedData, { withCredentials: true });
-        setSuccess('Estudiantes importados exitosamente');
+        const response = await axios.post(`${API_BASE_URL}/api/students/bulk`, formattedData, { withCredentials: true });
+        const { nuevos, actualizados, eliminados } = response.data;
+        setSuccess(`Nómina actualizada — Nuevos: ${nuevos}, Actualizados: ${actualizados}, Eliminados: ${eliminados}`);
         fetchStudents();
       } catch (error) {
         setError('Error al importar estudiantes');
@@ -283,68 +286,16 @@ const StudentManagement = () => {
     reader.readAsBinaryString(file);
   };
 
-  // Promoción masiva de cursos
-  const [showPromotionModal, setShowPromotionModal] = useState(false);
-  const [promoting, setPromoting] = useState(false);
-  const [promotionResult, setPromotionResult] = useState(null);
-
-  // Marcar/desmarcar repitente
-  const handleToggleRepitente = async (studentId, currentRepite) => {
-    try {
-      await axios.put(`${API_BASE_URL}/api/students/${studentId}`, 
-        { repite: !currentRepite }, 
-        { withCredentials: true }
-      );
-      setSuccess(`Estudiante ${currentRepite ? 'desmarcado' : 'marcado'} como repitente exitosamente`);
-      fetchStudents();
-      if (showRepitentes) {
-        fetchRepitentes();
-      }
-    } catch (error) {
-      setError('Error al actualizar estado de repitente: ' + (error.response?.data?.message || error.message));
-    }
-  };
-
-  // Promoción individual de un estudiante
-  const handlePromoteIndividual = async (studentId, currentCourse) => {
-    if (!window.confirm(`¿Estás seguro de que quieres promover a este estudiante del curso ${currentCourse}?`)) {
-      return;
-    }
-
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/students/${studentId}/promote`, {}, { withCredentials: true });
-      setSuccess(response.data.message);
-      fetchStudents();
-      if (showRepitentes) {
-        fetchRepitentes();
-      }
-    } catch (error) {
-      setError('Error al promover estudiante: ' + (error.response?.data?.message || error.message));
-    }
-  };
-
-  const handlePromoteStudents = async () => {
-    if (!window.confirm('¿Estás seguro de que quieres promover a todos los estudiantes al siguiente curso? Esta acción no se puede deshacer.')) {
-      return;
-    }
-
-    setPromoting(true);
-    try {
-      const response = await axios.post(`${API_BASE_URL}/api/students/promote`, {}, { withCredentials: true });
-      setPromotionResult(response.data);
-      setSuccess('Promoción de cursos completada exitosamente');
-      fetchStudents(); // Recargar la lista de estudiantes
-      setShowPromotionModal(false);
-    } catch (error) {
-      setError('Error al realizar la promoción: ' + (error.response?.data?.message || error.message));
-    } finally {
-      setPromoting(false);
-    }
-  };
+  const displayedStudents = showEgresados ? egresados : showRepitentes ? repitentes : filteredStudents;
+  const currentCollectionLabel = showEgresados ? 'egresados' : showRepitentes ? 'repitentes' : 'activos';
+  const hasActiveFilters = Boolean(searchTerm || selectedCourse);
 
   return (
-    <Container className="mt-4">
-      <h1>Gestión de Estudiantes</h1>
+    <Container className="page-shell">
+      <div className="page-title-block">
+        <h1 className="page-title">Gestión de Estudiantes</h1>
+        <p className="page-subtitle">Busca, filtra y administra la nómina del colegio desde una vista más rápida y clara.</p>
+      </div>
       
       {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
       {success && <Alert variant="success" onClose={() => setSuccess('')} dismissible>{success}</Alert>}
@@ -362,7 +313,7 @@ const StudentManagement = () => {
                     setShowRepitentes(false);
                   }}
                 >
-                  <i className="fas fa-users me-2"></i>
+                  <FaUsers className="me-2" />
                   Estudiantes Activos ({students.length})
                 </Button>
                 <Button
@@ -372,7 +323,7 @@ const StudentManagement = () => {
                     setShowRepitentes(true);
                   }}
                 >
-                  <i className="fas fa-redo me-2"></i>
+                  <FaRedo className="me-2" />
                   Repitentes ({repitentes.length})
                 </Button>
                 <Button
@@ -382,7 +333,7 @@ const StudentManagement = () => {
                     setShowRepitentes(false);
                   }}
                 >
-                  <i className="fas fa-graduation-cap me-2"></i>
+                  <FaGraduationCap className="me-2" />
                   Egresados ({egresados.length})
                 </Button>
               </div>
@@ -393,35 +344,45 @@ const StudentManagement = () => {
             <Col md={4}>
               <Form.Group>
                 <Form.Label>Buscar estudiante</Form.Label>
-                <Form.Control
-                  type="text"
-                  placeholder="Buscar por nombre o RUT"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+                <InputGroup>
+                  <InputGroup.Text>
+                    <FaSearch />
+                  </InputGroup.Text>
+                  <Form.Control
+                    type="text"
+                    placeholder="Buscar por nombre o RUT"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </InputGroup>
               </Form.Group>
             </Col>
             <Col md={3}>
               <Form.Group>
                 <Form.Label>Filtrar por curso</Form.Label>
-                <Form.Select
-                  value={selectedCourse}
-                  onChange={(e) => setSelectedCourse(e.target.value)}
-                >
-                  <option value="">Todos los cursos</option>
-                  {courses.map((course, index) => (
-                    <option key={index} value={course}>{course}</option>
-                  ))}
-                </Form.Select>
+                <InputGroup>
+                  <InputGroup.Text>
+                    <FaFilter />
+                  </InputGroup.Text>
+                  <Form.Select
+                    value={selectedCourse}
+                    onChange={(e) => setSelectedCourse(e.target.value)}
+                  >
+                    <option value="">Todos los cursos</option>
+                    {courses.map((course, index) => (
+                      <option key={index} value={course}>{course}</option>
+                    ))}
+                  </Form.Select>
+                </InputGroup>
               </Form.Group>
             </Col>
             <Col md={5} className="text-end">
-              <div className="d-flex gap-2 justify-content-end align-items-end">
+              <div className="d-flex gap-2 justify-content-end align-items-end flex-wrap student-toolbar-actions">
                 <Button 
                   variant="outline-primary" 
                   onClick={handleDownloadTemplate}
                   title="Descargar Plantilla Excel"
-                  style={{ width: '40px', height: '40px', padding: '0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  className="student-toolbar-icon-btn"
                 >
                   ⬇️
                 </Button>
@@ -437,11 +398,11 @@ const StudentManagement = () => {
                   });
                   setShowModal(true);
                 }}>
-                  <i className="fas fa-plus me-2"></i>
+                  <FaPlus className="me-2" />
                   Nuevo Estudiante
                 </Button>
                 <Form.Label htmlFor="importExcel" className="btn btn-success mb-0">
-                  <i className="fas fa-file-excel me-2"></i>
+                  <FaFileExcel className="me-2" />
                   Importar desde Excel
                 </Form.Label>
                 <Form.Control
@@ -451,14 +412,18 @@ const StudentManagement = () => {
                   className="d-none"
                   onChange={handleImportExcel}
                 />
-                <Button 
-                  variant="warning" 
-                  onClick={() => setShowPromotionModal(true)}
-                  title="Promover todos los estudiantes al siguiente curso"
-                >
-                  <i className="fas fa-graduation-cap me-2"></i>
-                  Pasar de Curso
-                </Button>
+                {hasActiveFilters && (
+                  <Button
+                    variant="outline-secondary"
+                    onClick={() => {
+                      setSearchTerm('');
+                      setSelectedCourse('');
+                    }}
+                  >
+                    <FaTimes className="me-2" />
+                    Limpiar filtros
+                  </Button>
+                )}
               </div>
             </Col>
           </Row>
@@ -470,14 +435,12 @@ const StudentManagement = () => {
         <Card.Body>
           <Row>
             <Col>
-              <h5 className="mb-0">
-                Total de estudiantes: <span className="text-primary">{students.length}</span>
-                {filteredStudents.length !== students.length && (
-                  <span className="ms-3">
-                    Estudiantes filtrados: <span className="text-success">{filteredStudents.length}</span>
-                  </span>
-                )}
-              </h5>
+              <div className="student-summary-strip">
+                <span className="student-summary-pill">Base total: {students.length}</span>
+                <span className="student-summary-pill student-summary-pill--active">Vista actual: {displayedStudents.length} {currentCollectionLabel}</span>
+                {selectedCourse && <span className="student-summary-pill">Curso: {selectedCourse}</span>}
+                {searchTerm && <span className="student-summary-pill">Búsqueda: "{searchTerm}"</span>}
+              </div>
             </Col>
           </Row>
         </Card.Body>
@@ -489,8 +452,33 @@ const StudentManagement = () => {
             <span className="visually-hidden">Cargando...</span>
           </Spinner>
         </div>
+      ) : displayedStudents.length === 0 ? (
+        <Card className="mb-4">
+          <Card.Body className="text-center py-5">
+            <h4 className="mb-3">No hay registros para mostrar</h4>
+            <p className="text-muted mb-3">
+              {hasActiveFilters
+                ? 'No encontramos estudiantes con los filtros actuales. Prueba limpiando la búsqueda o cambiando el curso.'
+                : `Aún no hay estudiantes ${currentCollectionLabel} registrados.`}
+            </p>
+            {hasActiveFilters && (
+              <Button
+                variant="outline-primary"
+                onClick={() => {
+                  setSearchTerm('');
+                  setSelectedCourse('');
+                }}
+              >
+                <FaTimes className="me-2" />
+                Limpiar filtros
+              </Button>
+            )}
+          </Card.Body>
+        </Card>
       ) : (
-        <Table striped bordered hover responsive>
+        <>
+        <div className="table-responsive table-shell student-table-shell student-table-desktop">
+        <Table striped bordered hover responsive className="mb-0">
           <thead>
             <tr>
               <th>RUT</th>
@@ -502,7 +490,7 @@ const StudentManagement = () => {
             </tr>
           </thead>
           <tbody>
-            {(showEgresados ? egresados : showRepitentes ? repitentes : filteredStudents).map((student) => (
+            {displayedStudents.map((student) => (
               <tr key={student._id}>
                 <td>{student.rut}</td>
                 <td>{`${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`}</td>
@@ -513,7 +501,7 @@ const StudentManagement = () => {
                     </span>
                     {!showEgresados && student.repite && (
                       <span className="badge bg-warning ms-2">
-                        <i className="fas fa-redo me-1"></i>
+                        <FaRedo className="me-1" />
                         Repitente
                       </span>
                     )}
@@ -533,40 +521,22 @@ const StudentManagement = () => {
                       <Button
                         variant="outline-primary"
                         size="sm"
-                        className="me-2"
+                        className="me-2 student-action-btn"
                         onClick={() => {
                           setCurrentStudent(student);
                           setStudentForm(student);
                           setShowModal(true);
                         }}
                       >
-                        <i className="fas fa-edit"></i>
-                      </Button>
-                      <Button
-                        variant={student.repite ? "outline-warning" : "outline-secondary"}
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handleToggleRepitente(student._id, student.repite)}
-                        title={student.repite ? "Desmarcar como repitente" : "Marcar como repitente"}
-                      >
-                        <i className={`fas ${student.repite ? "fa-check" : "fa-redo"}`}></i>
-                      </Button>
-                      <Button
-                        variant="outline-success"
-                        size="sm"
-                        className="me-2"
-                        onClick={() => handlePromoteIndividual(student._id, student.curso)}
-                        title="Promover individualmente al siguiente curso"
-                        disabled={student.repite}
-                      >
-                        <i className="fas fa-arrow-up"></i>
+                        <FaEdit />
                       </Button>
                       <Button
                         variant="outline-danger"
                         size="sm"
+                        className="student-action-btn"
                         onClick={() => handleDeleteStudent(student._id)}
                       >
-                        <i className="fas fa-trash"></i>
+                        <FaTrash />
                       </Button>
                     </>
                   ) : (
@@ -577,6 +547,57 @@ const StudentManagement = () => {
             ))}
           </tbody>
         </Table>
+        </div>
+        <div className="student-mobile-list">
+          {displayedStudents.map((student) => (
+            <Card key={student._id} className="student-mobile-card">
+              <Card.Body>
+                <div className="student-mobile-card__header">
+                  <div>
+                    <div className="fw-bold">{student.nombres} {student.apellidosPaterno}</div>
+                    <small className="text-muted">{student.rut || 'Sin RUT'}</small>
+                  </div>
+                  <span className="student-summary-pill student-summary-pill--active">{student.curso || 'Sin curso'}</span>
+                </div>
+                <div className="student-mobile-card__meta">
+                  <div><strong>Correo:</strong> {student.correoApoderado || 'Sin correo'}</div>
+                  {showEgresados && <div><strong>Año egreso:</strong> {student.añoEgreso || 'N/A'}</div>}
+                  {!showEgresados && student.repite && (
+                    <div className="text-warning fw-bold d-flex align-items-center gap-2">
+                      <FaRedo />
+                      Repitente
+                    </div>
+                  )}
+                </div>
+                {!showEgresados && (
+                  <div className="student-mobile-card__actions">
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={() => {
+                        setCurrentStudent(student);
+                        setStudentForm(student);
+                        setShowModal(true);
+                      }}
+                    >
+                      <FaEdit className="me-2" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline-danger"
+                      size="sm"
+                      onClick={() => handleDeleteStudent(student._id)}
+                    >
+                      <FaTrash className="me-2" />
+                      Eliminar
+                    </Button>
+                  </div>
+                )}
+              </Card.Body>
+            </Card>
+          ))}
+        </div>
+        </>
       )}
 
       {/* Modal para crear/editar estudiante */}
@@ -585,6 +606,7 @@ const StudentManagement = () => {
         onHide={() => setShowModal(false)}
         centered
         dialogClassName="modal-dialog-centered"
+        contentClassName="page-modal"
         style={{ marginTop: '5vh' }}
       >
         <Modal.Header closeButton>
@@ -669,84 +691,10 @@ const StudentManagement = () => {
           </Button>
         </Modal.Footer>
       </Modal>
-
-      {/* Modal de confirmación para promoción de cursos */}
-      <Modal 
-        show={showPromotionModal} 
-        onHide={() => setShowPromotionModal(false)}
-        centered
-        size="lg"
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>
-            <i className="fas fa-graduation-cap me-2 text-warning"></i>
-            Promoción Masiva de Cursos
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="alert alert-warning">
-            <i className="fas fa-exclamation-triangle me-2"></i>
-            <strong>¡Atención!</strong> Esta acción promoverá a TODOS los estudiantes al siguiente curso.
-          </div>
-          
-          <h6>Reglas de Promoción:</h6>
-          <ul className="list-unstyled">
-            <li><strong>PRE-K</strong> → <strong>kinder</strong></li>
-            <li><strong>kinder</strong> → <strong>1°A</strong></li>
-            <li><strong>1°A</strong> → <strong>2°A</strong></li>
-            <li><strong>2°A</strong> → <strong>3°A</strong></li>
-            <li><strong>3°A</strong> → <strong>4°A</strong></li>
-            <li><strong>4°A</strong> → <strong>5°A</strong></li>
-            <li><strong>5°A</strong> → <strong>6°A</strong></li>
-            <li><strong>6°A</strong> → <strong>7°A</strong></li>
-            <li><strong>7°A</strong> → <strong>8°A</strong></li>
-            <li><strong>8°A</strong> → <strong>I°M</strong></li>
-            <li><strong>I°M</strong> → <strong>II°M</strong></li>
-            <li><strong>II°M</strong> → <strong>III°M</strong></li>
-            <li><strong>III°M</strong> → <strong>IV°M</strong></li>
-            <li><strong>IV°M</strong> → <em>Egresado del sistema</em></li>
-          </ul>
-          
-          <div className="alert alert-info">
-            <i className="fas fa-info-circle me-2"></i>
-            <strong>Nota:</strong> Los estudiantes de IV°M serán marcados como egresados y se moverán a la pestaña "Egresados".
-          </div>
-          
-          <div className="alert alert-warning">
-            <i className="fas fa-exclamation-triangle me-2"></i>
-            <strong>Repitentes:</strong> Los estudiantes marcados como repitentes NO se promoverán automáticamente y mantendrán su curso actual.
-          </div>
-          
-          <div className="alert alert-info">
-            <i className="fas fa-info-circle me-2"></i>
-            <strong>Total de estudiantes:</strong> {students.length}
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPromotionModal(false)}>
-            Cancelar
-          </Button>
-          <Button 
-            variant="warning" 
-            onClick={handlePromoteStudents}
-            disabled={promoting}
-          >
-            {promoting ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" />
-                Procesando...
-              </>
-            ) : (
-              <>
-                <i className="fas fa-graduation-cap me-2"></i>
-                Confirmar Promoción
-              </>
-            )}
-          </Button>
-        </Modal.Footer>
-      </Modal>
     </Container>
   );
 };
 
 export default StudentManagement;
+
+

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Table, Badge, Alert, Spinner, Modal } from 'react-bootstrap';
 import { FaFilter, FaDownload, FaSearch, FaChartBar, FaTrash, FaEye } from 'react-icons/fa';
 import axios from 'axios';
+import '../styles/PageTheme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
 
@@ -164,11 +165,11 @@ function ActivityLog() {
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   return (
-    <Container className="mt-4">
-      <Row className="mb-4">
+    <Container className="page-shell">
+      <Row className="page-title-block align-items-start">
         <Col>
-          <h2><FaChartBar className="me-2" />Historial de Actividad</h2>
-          <p className="text-muted">Sistema de seguimiento de todas las acciones realizadas por los usuarios</p>
+          <h1 className="page-title"><FaChartBar className="me-3" />Historial de Actividad</h1>
+          <p className="page-subtitle">Seguimiento claro de acciones, filtros y registros del sistema.</p>
         </Col>
         <Col xs="auto">
           <Button variant="outline-primary" onClick={generateStats}>
@@ -181,7 +182,7 @@ function ActivityLog() {
       {error && <Alert variant="danger">{error}</Alert>}
 
       {/* Panel de Filtros */}
-      <Card className="mb-4">
+      <Card className="section-card mb-4">
         <Card.Header>
           <FaFilter className="me-2" />
           Filtros de Búsqueda
@@ -263,9 +264,9 @@ function ActivityLog() {
           </Spinner>
         </div>
       ) : (
-        <Card>
+        <Card className="section-card">
           <Card.Body>
-            <div className="table-responsive">
+            <div className="table-responsive table-shell">
               <Table striped bordered hover>
                 <thead>
                   <tr>
@@ -350,13 +351,13 @@ function ActivityLog() {
       )}
 
       {/* Modal de Estadísticas */}
-      <Modal show={showStats} onHide={() => setShowStats(false)} size="lg">
+      <Modal show={showStats} onHide={() => setShowStats(false)} size="lg" contentClassName="page-modal">
         <Modal.Header closeButton>
           <Modal.Title><FaChartBar className="me-2" />Estadísticas de Actividad</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {Object.entries(userStats).map(([user, stats]) => (
-            <Card key={user} className="mb-3">
+            <Card key={user} className="section-card mb-3">
               <Card.Header>
                 <strong>{user}</strong> - Total: {stats.total} acciones
               </Card.Header>
@@ -376,7 +377,7 @@ function ActivityLog() {
       </Modal>
 
       {/* Modal de Detalles */}
-      <Modal show={showDetailModal} onHide={() => setShowDetailModal(false)}>
+      <Modal show={showDetailModal} onHide={() => setShowDetailModal(false)} contentClassName="page-modal">
         <Modal.Header closeButton>
           <Modal.Title>Detalles del Registro</Modal.Title>
         </Modal.Header>

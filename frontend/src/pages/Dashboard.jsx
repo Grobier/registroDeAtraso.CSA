@@ -182,6 +182,18 @@ const Dashboard = () => {
     }
   };
 
+  const institutionalMonthlyPunctuality = useMemo(() => calculateInstitutionalPunctuality(), [tardiness]);
+
+  const currentMonthPunctuality = useMemo(() => {
+    const currentMonth = new Date().getMonth() + 1;
+    return institutionalMonthlyPunctuality.find((item) => item.month === currentMonth) || null;
+  }, [institutionalMonthlyPunctuality]);
+
+  const previousMonthPunctuality = useMemo(() => {
+    const currentMonth = new Date().getMonth() + 1;
+    return institutionalMonthlyPunctuality.find((item) => item.month === currentMonth - 1) || null;
+  }, [institutionalMonthlyPunctuality]);
+
   // Función para calcular estadísticas de puntualidad por curso
   const calculateCoursePunctuality = useMemo(() => {
     try {
@@ -253,6 +265,27 @@ const Dashboard = () => {
       return [];
     }
   }, [courseStats, students, tardiness]);
+
+  const executiveHighlights = useMemo(() => {
+    const topRiskCourse = [...calculateCoursePunctuality].sort((a, b) => a.averagePunctuality - b.averagePunctuality)[0];
+    return [
+      {
+        label: 'Estado de hoy',
+        value: todayCount === 0 ? 'Sin atrasos' : `${todayCount} registrados`,
+        description: todayCount === 0 ? 'No se registraron atrasos durante la jornada.' : 'Revisa el detalle diario para actuar rápido.'
+      },
+      {
+        label: 'Puntualidad mensual',
+        value: currentMonthPunctuality ? `${currentMonthPunctuality.percentage}%` : 'Sin datos',
+        description: currentMonthPunctuality ? `${currentMonthPunctuality.tardiness} atrasos acumulados en el mes.` : 'Aún no hay información suficiente para este período.'
+      },
+      {
+        label: 'Curso a revisar',
+        value: topRiskCourse ? topRiskCourse.course : 'Sin alertas',
+        description: topRiskCourse ? `${topRiskCourse.averagePunctuality}% de puntualidad promedio.` : 'Todavía no hay cursos con datos para comparar.'
+      }
+    ];
+  }, [calculateCoursePunctuality, currentMonthPunctuality, todayCount]);
 
   // Función para obtener datos
   const fetchData = async () => {
@@ -800,201 +833,220 @@ const Dashboard = () => {
         </Row>
       </div>
 
+      <Row className="mb-4">
+        {executiveHighlights.map((item) => (
+          <Col md={4} key={item.label} className="mb-3">
+            <Card className="chart-card dashboard-executive-card h-100">
+              <Card.Body>
+                <div className="dashboard-executive-label">{item.label}</div>
+                <div className="dashboard-executive-value">{item.value}</div>
+                <div className="dashboard-executive-description">{item.description}</div>
+              </Card.Body>
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {!isLoading && tardiness.length === 0 && (
+        <Card className="chart-card dashboard-empty-state mb-4">
+          <Card.Body className="text-center py-5">
+            <h3 className="chart-title mb-3">Todavía no hay atrasos registrados</h3>
+            <p className="chart-description mb-0">
+              Cuando empieces a registrar atrasos, aquí aparecerán los indicadores, rankings y tendencias del colegio.
+            </p>
+          </Card.Body>
+        </Card>
+      )}
 
       {/* Resumen de Puntualidad Institucional */}
       <Row className="mb-4">
-        <Col>
+        <Col lg={4} className="mb-4 mb-lg-0">
+          <Card className="chart-card">
+            <Card.Body>
+              <div className="monthly-summary-card">
+                <span className="monthly-summary-kicker">Resumen del mes actual</span>
+                <h3 className="chart-title mb-2">Puntualidad del colegio</h3>
+                <div className="monthly-summary-value">
+                  {currentMonthPunctuality ? `${currentMonthPunctuality.percentage}%` : 'Sin datos'}
+                </div>
+                <p className="monthly-summary-text">
+                  {currentMonthPunctuality
+                    ? `${currentMonthPunctuality.punctualDays} dias puntuales y ${currentMonthPunctuality.tardiness} atrasos registrados en ${new Date().toLocaleDateString('es-CL', { month: 'long' })}.`
+                    : 'Aun no hay suficientes datos para este mes.'}
+                </p>
+                <div className="monthly-summary-delta">
+                  {currentMonthPunctuality && previousMonthPunctuality
+                    ? `${currentMonthPunctuality.percentage >= previousMonthPunctuality.percentage ? 'Subio' : 'Bajo'} ${Math.abs(currentMonthPunctuality.percentage - previousMonthPunctuality.percentage)} puntos respecto al mes anterior`
+                    : 'La comparacion aparece cuando exista informacion del mes anterior'}
+                </div>
+              </div>
+            </Card.Body>
+          </Card>
+        </Col>
+        <Col lg={8}>
           <Card className="chart-card">
             <Card.Body>
               <h3 className="chart-title">
-                📊 Resumen de Puntualidad Institucional - {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
+                Resumen de Puntualidad Institucional - {new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric' })}
               </h3>
-                             <Row>
-                                  <Col md={3} sm={6} className="mb-3">
-                    <OverlayTrigger
-                      placement="top"
-                      overlay={
-                        <Tooltip>
-                          <strong>Estudiantes con Puntualidad Excelente (90-100%)</strong><br/>
-                          <em>Se calcula contando cuántos estudiantes individuales mantuvieron una puntualidad del 90% o superior durante el mes.</em><br/><br/>
-                          <strong>Fórmula:</strong> (Días hábiles - Días con atrasos del estudiante) / Días hábiles × 100<br/><br/>
-                          <strong>Ejemplo:</strong> Si un estudiante tuvo 2 atrasos en 20 días hábiles: (20-2)/20 × 100 = 90%
-                        </Tooltip>
-                      }
+              <Row>
+                <Col md={3} sm={6} className="mb-3">
+                  <OverlayTrigger
+                    placement="top"
+                    overlay={
+                      <Tooltip>
+                        <strong>Estudiantes con puntualidad excelente (90-100%)</strong><br />
+                        <em>Cuenta a los estudiantes que mantuvieron 90% o mas de puntualidad durante el mes.</em>
+                      </Tooltip>
+                    }
+                  >
+                    <div
+                      className="punctuality-card punctuality-card-excellent"
+                      onClick={() => openPunctualityModal('excelente', 'Excelentes (90-100%)')}
                     >
-                      <div 
-                        className="text-center p-3 bg-success bg-opacity-10 rounded border"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => openPunctualityModal('excelente', 'Excelentes (90-100%)')}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#d4edda'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = ''}
-                      >
-                         <h4 className="text-success mb-1">
-                           {(() => {
-                             const currentMonth = new Date().getMonth() + 1;
-                             const workingDays = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9][currentMonth - 1] || 20;
-                             
-                             // Contar estudiantes con puntualidad excelente (90-100%)
-                             if (!students || students.length === 0) return 0;
-                             
-                             return students.filter(student => {
-                               const studentTardiness = tardiness.filter(record => 
-                                 record.studentRut === student.rut && 
-                                 new Date(record.fecha).getMonth() + 1 === currentMonth &&
-                                 new Date(record.fecha).getFullYear() === 2025
-                               ).length;
-                               
-                               const studentPercentage = workingDays > 0 ? Math.round(((workingDays - studentTardiness) / workingDays) * 100) : 100;
-                               return studentPercentage >= 90;
-                             }).length;
-                           })()}
-                         </h4>
-                         <p className="text-success mb-0 fw-bold">🟢 Excelentes (90-100%)</p>
-                         <small className="text-muted">Click para ver detalles</small>
-                       </div>
-                    </OverlayTrigger>
-                  </Col>
-                                  <Col md={3} sm={6} className="mb-3">
-                    <OverlayTrigger
-                      placement="top"
-                      overlay={
-                        <Tooltip>
-                          <strong>Estudiantes con Puntualidad Buena (75-89%)</strong><br/>
-                          <em>Se calcula contando cuántos estudiantes individuales mantuvieron una puntualidad entre el 75% y 89% durante el mes.</em><br/><br/>
-                          <strong>Fórmula:</strong> (Días hábiles - Días con atrasos del estudiante) / Días hábiles × 100<br/><br/>
-                          <strong>Ejemplo:</strong> Si un estudiante tuvo 4 atrasos en 20 días hábiles: (20-4)/20 × 100 = 80%
-                        </Tooltip>
-                      }
+                      <h4 className="text-success mb-1">
+                        {(() => {
+                          const currentMonth = new Date().getMonth() + 1;
+                          const workingDays = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9][currentMonth - 1] || 20;
+                          if (!students || students.length === 0) return 0;
+
+                          return students.filter((student) => {
+                            const studentTardiness = tardiness.filter((record) =>
+                              record.studentRut === student.rut &&
+                              new Date(record.fecha).getMonth() + 1 === currentMonth &&
+                              new Date(record.fecha).getFullYear() === 2025
+                            ).length;
+
+                            const studentPercentage = workingDays > 0 ? Math.round(((workingDays - studentTardiness) / workingDays) * 100) : 100;
+                            return studentPercentage >= 90;
+                          }).length;
+                        })()}
+                      </h4>
+                      <p className="text-success mb-0 fw-bold">Excelentes (90-100%)</p>
+                      <small className="text-muted">Click para ver detalles</small>
+                    </div>
+                  </OverlayTrigger>
+                </Col>
+                <Col md={3} sm={6} className="mb-3">
+                  <OverlayTrigger
+                    placement="top"
+                    overlay={
+                      <Tooltip>
+                        <strong>Estudiantes con puntualidad buena (75-89%)</strong><br />
+                        <em>Cuenta a los estudiantes que mantuvieron entre 75% y 89% de puntualidad durante el mes.</em>
+                      </Tooltip>
+                    }
+                  >
+                    <div
+                      className="punctuality-card punctuality-card-good"
+                      onClick={() => openPunctualityModal('bueno', 'Buenos (75-89%)')}
                     >
-                      <div 
-                        className="text-center p-3 bg-warning bg-opacity-10 rounded border"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => openPunctualityModal('bueno', 'Buenos (75-89%)')}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#fff3cd'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = ''}
-                      >
-                         <h4 className="text-warning mb-1">
-                           {(() => {
-                             const currentMonth = new Date().getMonth() + 1;
-                             const workingDays = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9][currentMonth - 1] || 20;
-                             
-                             // Contar estudiantes con puntualidad buena (75-89%)
-                             if (!students || students.length === 0) return 0;
-                             
-                             return students.filter(student => {
-                               const studentTardiness = tardiness.filter(record => 
-                                 record.studentRut === student.rut && 
-                                 new Date(record.fecha).getMonth() + 1 === currentMonth &&
-                                 new Date(record.fecha).getFullYear() === 2025
-                               ).length;
-                               
-                               const studentPercentage = workingDays > 0 ? Math.round(((workingDays - studentTardiness) / workingDays) * 100) : 100;
-                               return studentPercentage >= 75 && studentPercentage < 90;
-                             }).length;
-                           })()}
-                         </h4>
-                         <p className="text-warning mb-0 fw-bold">🟡 Buenos (75-89%)</p>
-                         <small className="text-muted">Click para ver detalles</small>
-                       </div>
-                    </OverlayTrigger>
-                  </Col>
-                                  <Col md={3} sm={6} className="mb-3">
-                    <OverlayTrigger
-                      placement="top"
-                      overlay={
-                        <Tooltip>
-                          <strong>Estudiantes con Puntualidad Regular (60-74%)</strong><br/>
-                          <em>Se calcula contando cuántos estudiantes individuales mantuvieron una puntualidad entre el 60% y 74% durante el mes.</em><br/><br/>
-                          <strong>Fórmula:</strong> (Días hábiles - Días con atrasos del estudiante) / Días hábiles × 100<br/><br/>
-                          <strong>Ejemplo:</strong> Si un estudiante tuvo 6 atrasos en 20 días hábiles: (20-6)/20 × 100 = 70%
-                        </Tooltip>
-                      }
+                      <h4 className="text-warning mb-1">
+                        {(() => {
+                          const currentMonth = new Date().getMonth() + 1;
+                          const workingDays = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9][currentMonth - 1] || 20;
+                          if (!students || students.length === 0) return 0;
+
+                          return students.filter((student) => {
+                            const studentTardiness = tardiness.filter((record) =>
+                              record.studentRut === student.rut &&
+                              new Date(record.fecha).getMonth() + 1 === currentMonth &&
+                              new Date(record.fecha).getFullYear() === 2025
+                            ).length;
+
+                            const studentPercentage = workingDays > 0 ? Math.round(((workingDays - studentTardiness) / workingDays) * 100) : 100;
+                            return studentPercentage >= 75 && studentPercentage < 90;
+                          }).length;
+                        })()}
+                      </h4>
+                      <p className="text-warning mb-0 fw-bold">Buenos (75-89%)</p>
+                      <small className="text-muted">Click para ver detalles</small>
+                    </div>
+                  </OverlayTrigger>
+                </Col>
+                <Col md={3} sm={6} className="mb-3">
+                  <OverlayTrigger
+                    placement="top"
+                    overlay={
+                      <Tooltip>
+                        <strong>Estudiantes con puntualidad regular (60-74%)</strong><br />
+                        <em>Cuenta a los estudiantes que mantuvieron entre 60% y 74% de puntualidad durante el mes.</em>
+                      </Tooltip>
+                    }
+                  >
+                    <div
+                      className="punctuality-card punctuality-card-regular"
+                      onClick={() => openPunctualityModal('regular', 'Regulares (60-74%)')}
                     >
-                      <div 
-                        className="text-center p-3 bg-info bg-opacity-10 rounded border"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => openPunctualityModal('regular', 'Regulares (60-74%)')}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#d1ecf1'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = ''}
-                      >
-                         <h4 className="text-info mb-1">
-                           {(() => {
-                             const currentMonth = new Date().getMonth() + 1;
-                             const workingDays = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9][currentMonth - 1] || 20;
-                             
-                             // Contar estudiantes con puntualidad regular (60-74%)
-                             if (!students || students.length === 0) return 0;
-                             
-                             return students.filter(student => {
-                               const studentTardiness = tardiness.filter(record => 
-                                 record.studentRut === student.rut && 
-                                 new Date(record.fecha).getMonth() + 1 === currentMonth &&
-                                 new Date(record.fecha).getFullYear() === 2025
-                               ).length;
-                               
-                               const studentPercentage = workingDays > 0 ? Math.round(((workingDays - studentTardiness) / workingDays) * 100) : 100;
-                               return studentPercentage >= 60 && studentPercentage < 75;
-                             }).length;
-                           })()}
-                         </h4>
-                         <p className="text-info mb-0 fw-bold">🟠 Regulares (60-74%)</p>
-                         <small className="text-muted">Click para ver detalles</small>
-                       </div>
-                    </OverlayTrigger>
-                  </Col>
-                                  <Col md={3} sm={6} className="mb-3">
-                    <OverlayTrigger
-                      placement="top"
-                      overlay={
-                        <Tooltip>
-                          <strong>Estudiantes que Necesitan Mejora (&lt;60%)</strong><br/>
-                          <em>Se calcula contando cuántos estudiantes individuales tuvieron una puntualidad menor al 60% durante el mes.</em><br/><br/>
-                          <strong>Fórmula:</strong> (Días hábiles - Días con atrasos del estudiante) / Días hábiles × 100<br/><br/>
-                          <strong>Ejemplo:</strong> Si un estudiante tuvo 9 atrasos en 20 días hábiles: (20-9)/20 × 100 = 55%
-                        </Tooltip>
-                      }
+                      <h4 className="text-info mb-1">
+                        {(() => {
+                          const currentMonth = new Date().getMonth() + 1;
+                          const workingDays = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9][currentMonth - 1] || 20;
+                          if (!students || students.length === 0) return 0;
+
+                          return students.filter((student) => {
+                            const studentTardiness = tardiness.filter((record) =>
+                              record.studentRut === student.rut &&
+                              new Date(record.fecha).getMonth() + 1 === currentMonth &&
+                              new Date(record.fecha).getFullYear() === 2025
+                            ).length;
+
+                            const studentPercentage = workingDays > 0 ? Math.round(((workingDays - studentTardiness) / workingDays) * 100) : 100;
+                            return studentPercentage >= 60 && studentPercentage < 75;
+                          }).length;
+                        })()}
+                      </h4>
+                      <p className="text-info mb-0 fw-bold">Regulares (60-74%)</p>
+                      <small className="text-muted">Click para ver detalles</small>
+                    </div>
+                  </OverlayTrigger>
+                </Col>
+                <Col md={3} sm={6} className="mb-3">
+                  <OverlayTrigger
+                    placement="top"
+                    overlay={
+                      <Tooltip>
+                        <strong>Estudiantes que necesitan mejora (&lt;60%)</strong><br />
+                        <em>Cuenta a los estudiantes con puntualidad menor a 60% durante el mes.</em>
+                      </Tooltip>
+                    }
+                  >
+                    <div
+                      className="punctuality-card punctuality-card-danger"
+                      onClick={() => openPunctualityModal('necesita-mejora', 'Necesitan Mejora (<60%)')}
                     >
-                      <div 
-                        className="text-center p-3 bg-danger bg-opacity-10 rounded border"
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => openPunctualityModal('necesita-mejora', 'Necesitan Mejora (<60%)')}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8d7da'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = ''}
-                      >
-                         <h4 className="text-danger mb-1">
-                           {(() => {
-                             const currentMonth = new Date().getMonth() + 1;
-                             const workingDays = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9][currentMonth - 1] || 20;
-                             
-                             // Contar estudiantes con puntualidad que necesita mejora (<60%)
-                             if (!students || students.length === 0) return 0;
-                             
-                             return students.filter(student => {
-                               const studentTardiness = tardiness.filter(record => 
-                                 record.studentRut === student.rut && 
-                                 new Date(record.fecha).getMonth() + 1 === currentMonth &&
-                                 new Date(record.fecha).getFullYear() === 2025
-                               ).length;
-                               
-                               const studentPercentage = workingDays > 0 ? Math.round(((workingDays - studentTardiness) / workingDays) * 100) : 100;
-                               return studentPercentage < 60;
-                             }).length;
-                           })()}
-                         </h4>
-                         <p className="text-danger mb-0 fw-bold">🔴 Necesitan Mejora (&lt;60%)</p>
-                         <small className="text-muted">Click para ver detalles</small>
-                       </div>
-                    </OverlayTrigger>
-                  </Col>
-               </Row>
+                      <h4 className="text-danger mb-1">
+                        {(() => {
+                          const currentMonth = new Date().getMonth() + 1;
+                          const workingDays = [20, 20, 20, 21, 19, 12, 18, 20, 17, 21, 20, 9][currentMonth - 1] || 20;
+                          if (!students || students.length === 0) return 0;
+
+                          return students.filter((student) => {
+                            const studentTardiness = tardiness.filter((record) =>
+                              record.studentRut === student.rut &&
+                              new Date(record.fecha).getMonth() + 1 === currentMonth &&
+                              new Date(record.fecha).getFullYear() === 2025
+                            ).length;
+
+                            const studentPercentage = workingDays > 0 ? Math.round(((workingDays - studentTardiness) / workingDays) * 100) : 100;
+                            return studentPercentage < 60;
+                          }).length;
+                        })()}
+                      </h4>
+                      <p className="text-danger mb-0 fw-bold">Necesitan Mejora (&lt;60%)</p>
+                      <small className="text-muted">Click para ver detalles</small>
+                    </div>
+                  </OverlayTrigger>
+                </Col>
+              </Row>
             </Card.Body>
           </Card>
         </Col>
       </Row>
 
       <Row className="mb-4">
-        <Col md={6}>
-          <Card className="chart-card">
+        <Col md={12}>
+          <Card className="chart-card bottom-chart-card">
             <Card.Body>
               <h3 className="chart-title">
                 Tendencia de Atrasos por Día
@@ -1017,137 +1069,7 @@ const Dashboard = () => {
             </Card.Body>
           </Card>
         </Col>
-        <Col md={6}>
-          <Card className="chart-card">
-            <Card.Body>
-              <h3 className="chart-title">
-                Distribución por Hora
-                <OverlayTrigger
-                  placement="top"
-                  overlay={<Tooltip>Cantidad de atrasos por hora del día</Tooltip>}
-                >
-                  <FaInfoCircle className="ms-2" />
-                </OverlayTrigger>
-              </h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={timeStats}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" />
-                  <YAxis />
-                  <RechartsTooltip />
-                  <Line type="monotone" dataKey="total" stroke="#34a853" />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card.Body>
-          </Card>
-        </Col>
       </Row>
-
-      {/* Gráfico de Evolución Mensual de Puntualidad Institucional */}
-      <Row className="mb-4">
-        <Col>
-          <Card className="chart-card">
-            <Card.Body>
-              <h3 className="chart-title">
-                📈 Evolución Mensual de Puntualidad Institucional - 2025
-              </h3>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={calculateInstitutionalPunctuality()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="monthName" />
-                  <YAxis domain={[0, 100]} />
-                  <RechartsTooltip />
-                  <Bar dataKey="percentage" fill="#1a73e8" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
-
-             {/* Criterios de Calificación */}
-       <Row className="mb-4">
-         <Col>
-           <Card className="chart-card">
-             <Card.Body>
-               <h3 className="chart-title">
-                 📋 Criterios de Calificación por Puntualidad
-               </h3>
-               <div className="table-responsive">
-                 <Table striped bordered hover>
-                   <thead>
-                     <tr>
-                       <th className="text-center">Calificación</th>
-                       <th className="text-center">Rango de Puntualidad</th>
-                       <th className="text-center">Descripción</th>
-                       <th className="text-center">Color</th>
-                     </tr>
-                   </thead>
-                   <tbody>
-                     <tr>
-                       <td className="text-center">
-                         <Badge bg="success" style={{ fontSize: '1rem', color: 'white', fontWeight: 'bold' }}>
-                           Excelente
-                         </Badge>
-                       </td>
-                       <td className="text-center">
-                         <strong>90% - 100%</strong>
-                       </td>
-                       <td>El curso mantiene una puntualidad sobresaliente, con la mayoría de estudiantes llegando a tiempo</td>
-                       <td className="text-center">
-                         <div style={{ width: '20px', height: '20px', backgroundColor: '#198754', borderRadius: '50%', margin: '0 auto' }}></div>
-                       </td>
-                     </tr>
-                     <tr>
-                       <td className="text-center">
-                         <Badge bg="warning" style={{ fontSize: '1rem', color: 'black', fontWeight: 'bold' }}>
-                           Bueno
-                         </Badge>
-                       </td>
-                       <td className="text-center">
-                         <strong>75% - 89%</strong>
-                       </td>
-                       <td>El curso mantiene una buena puntualidad, con algunos casos de atrasos ocasionales</td>
-                       <td className="text-center">
-                         <div style={{ width: '20px', height: '20px', backgroundColor: '#ffc107', borderRadius: '50%', margin: '0 auto' }}></div>
-                       </td>
-                     </tr>
-                     <tr>
-                       <td className="text-center">
-                         <Badge bg="info" style={{ fontSize: '1rem', color: 'white', fontWeight: 'bold' }}>
-                           Regular
-                         </Badge>
-                       </td>
-                       <td className="text-center">
-                         <strong>60% - 74%</strong>
-                       </td>
-                       <td>El curso tiene una puntualidad aceptable pero con espacio para mejorar</td>
-                       <td className="text-center">
-                         <div style={{ width: '20px', height: '20px', backgroundColor: '#0dcaf0', borderRadius: '50%', margin: '0 auto' }}></div>
-                       </td>
-                     </tr>
-                     <tr>
-                       <td className="text-center">
-                         <Badge bg="danger" style={{ fontSize: '1rem', color: 'white', fontWeight: 'bold' }}>
-                           Necesita Mejora
-                         </Badge>
-                       </td>
-                       <td className="text-center">
-                         <strong>0% - 59%</strong>
-                       </td>
-                       <td>El curso requiere atención inmediata para mejorar la puntualidad de los estudiantes</td>
-                       <td className="text-center">
-                         <div style={{ width: '20px', height: '20px', backgroundColor: '#dc3545', borderRadius: '50%', margin: '0 auto' }}></div>
-                       </td>
-                     </tr>
-                   </tbody>
-                 </Table>
-               </div>
-               
-             </Card.Body>
-           </Card>
-         </Col>
-       </Row>
 
                {/* Ranking de Cursos por Puntualidad */}
         <Row className="mb-4">
@@ -1278,8 +1200,12 @@ const Dashboard = () => {
         <Col md={6}>
           <Card className="chart-card">
             <Card.Body>
-              <h3 className="chart-title">Atrasos por Curso</h3>
-              <ResponsiveContainer width="100%" height={250}>
+              <h3 className="chart-title">Distribucion de atrasos por curso</h3>
+              <p className="chart-description">
+                Muestra que porcentaje del total de atrasos corresponde a cada curso.
+              </p>
+              <div className="chart-frame">
+              <ResponsiveContainer width="100%" height={280}>
                <PieChart>
                   <Pie
                    data={dataCursos}
@@ -1287,7 +1213,9 @@ const Dashboard = () => {
                     nameKey="_id"
                     cx="50%"
                     cy="50%"
-                    outerRadius={70}
+                    outerRadius={96}
+                    innerRadius={46}
+                    paddingAngle={3}
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                  >
                    {dataCursos && dataCursos.map((entry, index) => (
@@ -1296,7 +1224,8 @@ const Dashboard = () => {
                  </Pie>
                  <RechartsTooltip />
                </PieChart>
-              </ResponsiveContainer>
+               </ResponsiveContainer>
+              </div>
 
             </Card.Body>
           </Card>
@@ -1304,19 +1233,21 @@ const Dashboard = () => {
         
         <Col md={6}>
         
-        <Card className="chart-card">
+        <Card className="chart-card bottom-chart-card">
           <Card.Body>
             <h3 className="chart-title">Top 5 Estudiantes con más Atrasos</h3>
-            <ResponsiveContainer width="100%" height={250}>
+            <div className="chart-frame">
+            <ResponsiveContainer width="100%" height={280}>
                         <BarChart
                data={topStudentsWithNames || []}
-                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                margin={{ top: 12, right: 18, left: 8, bottom: 36 }}
              >
                 <CartesianGrid strokeDasharray="3 3" />
                 {/* Usamos "name" para que se muestre el nombre en el tooltip */}
                <XAxis 
                  dataKey="name" 
-                 tick={{ fontSize: 10 }}
+                 tick={{ fontSize: 11 }}
+                 interval={0}
                  /* Opcional: si quieres formatear el texto, puedes hacerlo aquí */
                 />
                 <YAxis />
@@ -1329,9 +1260,10 @@ const Dashboard = () => {
                 />
 
                 <Legend />
-               <Bar dataKey="total" fill="#0070ff" name="Atrasos" />
+               <Bar dataKey="total" fill="#2d6fd6" name="Atrasos" radius={[10, 10, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            </div>
          </Card.Body>
         </Card>
         

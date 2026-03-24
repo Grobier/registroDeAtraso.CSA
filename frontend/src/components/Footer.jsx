@@ -2,11 +2,11 @@ import React from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import './Footer.css';
 
-const Footer = () => {
+const Footer = ({ withSidebar = false }) => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="footer">
+    <footer className={`footer${withSidebar ? ' footer-with-sidebar' : ''}`}>
       <Container>
         <Row className="text-center py-3">
           <Col>

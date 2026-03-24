@@ -1,4 +1,3 @@
-// routes/tardiness.js
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
@@ -14,35 +13,40 @@ const { ensureAuthenticated } = require('../middlewares/auth');
 
 // Utilidades de RUT
 const normalizeRut = (rut) => rut?.toString()?.toLowerCase()?.replace(/[.\-]/g, '')?.trim();
+
 const buildRutFlexibleRegex = (normalizedRut) => {
   const escaped = normalizedRut
     .split('')
-    .map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .map((ch) => ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('[.\\-]?');
   return new RegExp(`^${escaped}$`, 'i');
 };
 
 // Configuración de Multer para subida de archivos
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination(req, file, cb) {
     const uploadDir = path.join(__dirname, '../uploads/certificados');
-    // Crear directorio si no existe
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
     cb(null, uploadDir);
   },
-  filename: function (req, file, cb) {
-    // Generar nombre único: timestamp + nombre original
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+  filename(req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + '-' + file.originalname);
   }
 });
 
 const fileFilter = (req, file, cb) => {
-  // Permitir solo ciertos tipos de archivo
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-  
+  const allowedTypes = [
+    'application/pdf',
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ];
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -50,124 +54,80 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ 
-  storage: storage,
-  fileFilter: fileFilter,
+const upload = multer({
+  storage,
+  fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB máximo
+    fileSize: 5 * 1024 * 1024
   }
 });
 
-// Verificar la conexión SMTP al iniciar el servidor
-console.log("🔧 Iniciando verificación de conexión SMTP...");
-console.log("🔧 EMAIL_USER configurado:", !!process.env.EMAIL_USER);
-console.log("🔧 EMAIL_PASS configurado:", !!process.env.EMAIL_PASS);
+console.log('🔧 Iniciando verificación de conexión SMTP...');
+console.log('🔧 EMAIL_USER configurado:', !!process.env.EMAIL_USER);
+console.log('🔧 EMAIL_PASS configurado:', !!process.env.EMAIL_PASS);
 
-verifyEmailConnection().then(success => {
-  console.log("✅ Verificación SMTP exitosa:", success);
-}).catch(error => {
-  console.error("❌ Error en verificación inicial de email:", error);
-  console.error("❌ Stack trace:", error.stack);
-});
+verifyEmailConnection()
+  .then((success) => {
+    console.log('✅ Verificación SMTP exitosa:', success);
+  })
+  .catch((error) => {
+    console.error('❌ Error en verificación inicial de email:', error);
+    console.error('❌ Stack trace:', error.stack);
+  });
 
-// Función para limpiar completamente el RUT
-const cleanRut = (rut) => {
-  return rut.toString().trim().replace(/\s+/g, '');
-};
+const cleanRut = (rut) => rut.toString().trim().replace(/\s+/g, '');
 
-// 1. Registrar un atraso (la hora se asigna automáticamente)
 router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async (req, res) => {
   console.log('\n=== INTENTANDO REGISTRAR ATRASO ===');
   console.log('Usuario autenticado:', req.user);
   console.log('Session ID:', req.sessionID);
   console.log('req.isAuthenticated():', req.isAuthenticated());
   console.log('Body recibido:', req.body);
-  
+
   try {
     const { motivo, rut, curso, trajoCertificado, horaManual } = req.body;
     const trajo = ['true', '1', 'on', true, 1, 'True', 'TRUE'].includes(trajoCertificado);
     const certificadoAdjunto = req.file ? req.file.filename : null;
-    
-    console.log("\n=== DATOS RECIBIDOS ===");
-    console.log("Motivo:", motivo);
-    console.log("RUT recibido:", rut);
-    console.log("Curso:", curso);
-    console.log("Trajo certificado (raw):", trajoCertificado);
-    console.log("Trajo certificado (bool):", trajo);
-    console.log("Hora manual:", horaManual);
-    console.log("Certificado adjunto:", certificadoAdjunto);
-    
-    // Normalizar completamente el RUT (sin puntos ni guiones)
+
     const searchRut = normalizeRut(rut);
-    
-    console.log("\n=== DIAGNÓSTICO DE RUT ===");
-    console.log("RUT original:", rut);
-    console.log("RUT limpio:", searchRut);
-    console.log("Longitud RUT:", searchRut.length);
-    console.log("Códigos ASCII:", [...searchRut].map(c => c.charCodeAt(0)));
 
     if (!motivo || !rut || !curso) {
-      return res.status(400).json({ error: "Campos requeridos: motivo, rut y curso." });
+      return res.status(400).json({ error: 'Campos requeridos: motivo, rut y curso.' });
     }
 
-    // Determinar la hora a usar: manual si se proporciona, actual si no
-    let horaRegistro, horaRegistroHour, horaRegistroMinute;
-    
+    let horaRegistro;
+    let horaRegistroHour;
+    let horaRegistroMinute;
+
     if (horaManual) {
-      // Usar la hora manual proporcionada
-      console.log("🕐 Usando hora manual:", horaManual);
       horaRegistro = horaManual;
-      
-      // Parsear la hora manual (formato HH:mm)
       const [hours, minutes] = horaManual.split(':').map(Number);
       horaRegistroHour = hours;
       horaRegistroMinute = minutes;
     } else {
-      // Usar la hora actual del servidor
-      console.log("🕐 Usando hora actual del servidor");
       horaRegistro = moment().tz('America/Santiago').format('HH:mm');
       horaRegistroHour = moment().tz('America/Santiago').hour();
       horaRegistroMinute = moment().tz('America/Santiago').minute();
     }
-    
-    console.log("🕐 Hora final a registrar:", horaRegistro);
-    console.log("🕐 Hora (número):", horaRegistroHour);
-    console.log("🕐 Minutos (número):", horaRegistroMinute);
-    
-         // Lógica para determinar concepto y si requiere certificado
-     let concepto = 'presente';
-     let requiereCertificado = false;
-     
-     // Si llega antes o a las 9:30 (9 horas y 30 minutos = 9*60 + 30 = 570 minutos)
-     const minutosDesdeMedianoche = horaRegistroHour * 60 + horaRegistroMinute;
-     const limiteMinutos = 9 * 60 + 30; // 9:30 AM
-     
-     if (minutosDesdeMedianoche <= limiteMinutos) {
-       // Hasta 9:30 AM → presente (con o sin certificado)
-       concepto = 'presente';
-       requiereCertificado = false;
-     } else {
-       // Después de 9:30 AM
-      if (trajo) {
-         // Con certificado → atrasado-presente
-         concepto = 'atrasado-presente';
-         requiereCertificado = true;
-       } else {
-         // Sin certificado → ausente
-         concepto = 'ausente';
-         requiereCertificado = true;
-       }
-       
-       // Validar que si es después de 9:30 AM, debe traer certificado
-       if (!trajoCertificado) {
-          /*return*/ res.status(400).json({ 
-           error: "Después de las 9:30 AM es obligatorio presentar certificado médico para justificar el atraso." 
-         });
-       }
-     }
 
-    // Guardar el registro de atraso en Tardiness
-    const newTardiness = new Tardiness({ 
+    let concepto = 'presente';
+    let requiereCertificado = false;
+
+    const minutosDesdeMedianoche = horaRegistroHour * 60 + horaRegistroMinute;
+    const limiteMinutos = 9 * 60 + 30;
+
+    if (minutosDesdeMedianoche <= limiteMinutos) {
+      concepto = 'presente';
+      requiereCertificado = false;
+    } else if (trajo) {
+      concepto = 'atrasado-presente';
+      requiereCertificado = true;
+    } else {
+      concepto = 'ausente';
+      requiereCertificado = true;
+    }
+
+    const newTardiness = new Tardiness({
       hora: horaRegistro,
       motivo,
       studentRut: searchRut,
@@ -177,37 +137,23 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       concepto,
       requiereCertificado
     });
-    await newTardiness.save();
-    console.log("Registro de atraso guardado:", newTardiness);
 
-    // Registrar actividad
-    let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
+    await newTardiness.save();
+
+    const performedBy = req.user && req.user.username ? req.user.username : 'Desconocido';
+
     await ActivityLog.create({
       user: performedBy,
       action: 'Registrar atraso',
       details: `Atraso registrado para RUT: ${rut}, curso: ${curso}, concepto: ${concepto}, certificado: ${trajoCertificado ? 'Sí' : 'No'}`
     });
 
-    // Log 2: Buscar todos los estudiantes para verificar
     const todosLosEstudiantes = await Student.find({});
-    console.log("\n=== ESTUDIANTES EN LA BASE DE DATOS ===");
-    console.log("Número total de estudiantes:", todosLosEstudiantes.length);
-    console.log("Lista de RUTs en la BD:", todosLosEstudiantes.map(s => ({
-      rut: s.rut,
-      tipo: typeof s.rut
-    })));
 
-    // Buscar el estudiante con múltiples estrategias de búsqueda
     let student = await Student.findOne({ rut: { $regex: buildRutFlexibleRegex(searchRut) } });
 
-    // Si no se encuentra, intentar búsquedas más flexibles
     if (!student) {
-      console.log("🔍 Primera búsqueda falló, intentando búsquedas alternativas...");
-      
-      // Buscar por RUT sin guión ni dígito verificador
       const rutSinGuion = searchRut.replace(/[-\dkK]/g, '');
-      console.log("🔍 Buscando RUT sin guión:", rutSinGuion);
-      
       student = await Student.findOne({
         $or: [
           { rut: { $regex: new RegExp(`^${rutSinGuion}`, 'i') } },
@@ -216,108 +162,44 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       });
     }
 
-    // Si aún no se encuentra, buscar por coincidencia parcial
     if (!student) {
-      console.log("🔍 Segunda búsqueda falló, intentando coincidencia parcial...");
-      
       student = await Student.findOne({
         rut: { $regex: new RegExp(searchRut.replace(/[-\dkK]/g, ''), 'i') }
       });
     }
-    console.log("\n=== RESULTADO DE BÚSQUEDA ===");
-    console.log("Estudiante encontrado:", student ? "SÍ" : "NO");
-    
+
     if (student) {
-      console.log("✅ Estudiante encontrado exitosamente!");
-      console.log("Datos del estudiante encontrado:", {
-        rut: student.rut,
-        nombres: student.nombres,
-        curso: student.curso,
-        correoApoderado: student.correoApoderado
-      });
-      console.log("📧 Correo del apoderado:", student.correoApoderado);
-      console.log("📧 Tipo de correo:", typeof student.correoApoderado);
-      console.log("📧 Longitud del correo:", student.correoApoderado?.length);
-      
-      // Enviar correo SIEMPRE si el estudiante tiene correo configurado
-      let emailSent = false;
-      let emailError = null;
-
       if (student.correoApoderado && student.correoApoderado.trim() !== '') {
-        console.log("\n📧 ========================================");
-        console.log("📧 INICIANDO PROCESO DE ENVÍO DE CORREO");
-        console.log("📧 ========================================");
-        console.log("📧 Estudiante:", student.rut);
-        console.log("📧 Correo apoderado:", student.correoApoderado);
-        
         const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
-
-        // Formatear la fecha y hora con la zona horaria correcta
         const fechaFormateada = moment(newTardiness.fecha).tz('America/Santiago').format('DD/MM/YYYY');
-        const horaFormateada = horaRegistro; // Usar la hora registrada (manual o actual)
+        const horaFormateada = horaRegistro;
 
-        // Opciones del correo
         const mailOptions = {
           from: process.env.EMAIL_USER,
           to: student.correoApoderado,
           subject: 'Notificación de Atraso',
-          text: `Estimado(a) apoderado(a) de ${nombreCompleto},:
-
-Le informamos que el/la estudiante ${nombreCompleto} registró un atraso el día ${fechaFormateada}, 
-ingresando al establecimiento a las ${horaFormateada}.
-
+          text:
+            `Estimado(a) apoderado(a) de ${nombreCompleto},:
+Le informamos que el/la estudiante ${nombreCompleto} registró un atraso el día ${fechaFormateada}, ingresando al establecimiento a las ${horaFormateada}.
 Motivo del atraso: ${motivo}
-
-Le recordamos que la puntualidad es fundamental para favorecer el proceso de
-aprendizaje y que este registro será considerado en la revisión mensual, según lo
-establecido en nuestro Manual de Convivencia Escolar, el cual puede revisar en:
+Le recordamos que la puntualidad es fundamental para favorecer el proceso de aprendizaje y que este registro será considerado en la revisión mensual, según lo establecido en nuestro Manual de Convivencia Escolar, el cual puede revisar en:
 https://www.colegiosaintarieli.cl/normativa/reglamentos-internos.
 Agradecemos su atención y compromiso.
-
 Atentamente,
-
 Equipo directivo.`
         };
 
-        console.log("📧 Preparando envío de correo...");
-        console.log("📧 Destinatario:", mailOptions.to);
-        console.log("📧 Asunto:", mailOptions.subject);
-        
-        // Enviar correo de forma asíncrona (no bloquea la respuesta)
-        sendEmail(mailOptions).then(mailInfo => {
-          emailSent = true;
-          console.log("✅ ========================================");
-          console.log("✅ CORREO ENVIADO EXITOSAMENTE");
-          console.log("✅ ========================================");
-          console.log("✅ MessageId:", mailInfo.messageId);
-          console.log("✅ Respuesta completa:", mailInfo);
-        }).catch(mailError => {
-          emailError = mailError.message;
-          console.error("❌ ========================================");
-          console.error("❌ ERROR AL ENVIAR CORREO");
-          console.error("❌ ========================================");
-          console.error("❌ Error:", mailError.message);
-          console.error("❌ Detalles:", {
-            code: mailError.code,
-            command: mailError.command,
-            response: mailError.response
+        sendEmail(mailOptions)
+          .then((mailInfo) => {
+            console.log('✅ Correo enviado:', mailInfo.messageId);
+          })
+          .catch((mailError) => {
+            console.error('❌ Error al enviar correo:', mailError.message);
           });
-        });
-      } else {
-        console.log("⚠️ El estudiante no tiene correo del apoderado configurado");
-        emailError = "No hay correo configurado para el apoderado";
-      }
-    } else {
-      console.log("⚠️ No se encontró el estudiante. Comparación de RUTs:");
-      console.log("RUT buscado:", searchRut);
-      const estudianteSimilar = todosLosEstudiantes.find(s => s.rut.includes(searchRut) || searchRut.includes(s.rut));
-      if (estudianteSimilar) {
-        console.log("Se encontró un RUT similar:", estudianteSimilar.rut);
       }
     }
 
-    // Preparar respuesta con información del correo
-    const responseData = { 
+    const responseData = {
       message: `Atraso registrado como ${concepto}`,
       concepto,
       requiereCertificado,
@@ -326,214 +208,191 @@ Equipo directivo.`
       emailError: null
     };
 
-    // Esperar un momento para que el correo se procese (no bloquea completamente)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    // Intentar determinar si el correo se envió correctamente
     if (student && student.correoApoderado && student.correoApoderado.trim() !== '') {
       responseData.message += ' y correo enviado al apoderado';
       responseData.emailSent = true;
     } else {
       responseData.message += ' (correo no enviado - sin correo configurado)';
       responseData.emailSent = false;
-      responseData.emailError = "No hay correo configurado para el apoderado";
+      responseData.emailError = 'No hay correo configurado para el apoderado';
     }
 
     res.status(201).json(responseData);
   } catch (error) {
-    console.error("Error completo:", error);
-    
-    // Si hay un archivo subido y hay error, eliminarlo
+    console.error('Error completo:', error);
+
     if (req.file) {
       try {
         fs.unlinkSync(req.file.path);
-        console.log("Archivo eliminado debido al error:", req.file.path);
       } catch (unlinkError) {
-        console.error("Error al eliminar archivo:", unlinkError);
+        console.error('Error al eliminar archivo:', unlinkError);
       }
     }
-    
-    // Manejar errores específicos de multer
+
     if (error instanceof multer.MulterError) {
       if (error.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ error: "El archivo es demasiado grande. Máximo 5MB." });
+        return res.status(400).json({ error: 'El archivo es demasiado grande. Máximo 5MB.' });
       }
-      return res.status(400).json({ error: "Error en la subida del archivo: " + error.message });
+      return res.status(400).json({ error: `Error en la subida del archivo: ${error.message}` });
     }
-    
-    res.status(500).json({ error: "Error en el servidor" });
+
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 
-// 2. Obtener estadísticas
 router.get('/statistics', async (req, res) => {
   try {
-    const statsByDay = await Tardiness.aggregate([
-      {
-        $group: {
-          _id: {
-            $dateToString: {
-              format: "%Y-%m-%d",
-              date: "$fecha",
-              timezone: "America/Santiago"
-            }
-          },
-          total: { $sum: 1 }
-        }
-      },
-      { $sort: { _id: -1 } }
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    const startOfYear = new Date(`${year}-01-01T00:00:00.000Z`);
+    const endOfYear = new Date(`${year + 1}-01-01T00:00:00.000Z`);
+    const yearFilter = { fecha: { $gte: startOfYear, $lt: endOfYear } };
+
+    const [statsByDay, statsByCourse, statsByStudent, allTardiness] = await Promise.all([
+      Tardiness.aggregate([
+        { $match: yearFilter },
+        {
+          $group: {
+            _id: {
+              $dateToString: {
+                format: '%Y-%m-%d',
+                date: '$fecha',
+                timezone: 'America/Santiago'
+              }
+            },
+            total: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: -1 } }
+      ]),
+      Tardiness.aggregate([
+        { $match: yearFilter },
+        {
+          $group: {
+            _id: '$curso',
+            total: { $sum: 1 }
+          }
+        },
+        { $sort: { total: -1 } }
+      ]),
+      Tardiness.aggregate([
+        { $match: yearFilter },
+        {
+          $group: {
+            _id: '$studentRut',
+            total: { $sum: 1 }
+          }
+        },
+        { $sort: { total: -1 } }
+      ]),
+      Tardiness.find(yearFilter).sort({ fecha: -1 }).limit(1000)
     ]);
 
-    const statsByCourse = await Tardiness.aggregate([
-      {
-        $group: {
-          _id: "$curso",
-          total: { $sum: 1 }
-        }
-      },
-      { $sort: { total: -1 } }
-    ]);
-
-    const statsByStudent = await Tardiness.aggregate([
-      {
-        $group: {
-          _id: "$studentRut",
-          total: { $sum: 1 }
-        }
-      },
-      { $sort: { total: -1 } }
-    ]);
-
-    // Obtener todos los atrasos ordenados por fecha
-    const allTardiness = await Tardiness.find().sort({ fecha: -1 });
-
-    res.json({ 
-      statsByDay, 
-      statsByCourse, 
+    res.json({
+      statsByDay,
+      statsByCourse,
       statsByStudent,
-      allTardiness 
+      allTardiness,
+      year
     });
   } catch (error) {
-    console.error("Error en estadísticas:", error);
-    res.status(500).json({ error: "Error en el servidor" });
+    console.error('Error en estadísticas:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 
-// ENDPOINT TEMPORAL PARA DIAGNOSTICAR FECHAS
 router.get('/debug/dates', async (req, res) => {
   try {
     const allDates = await Tardiness.distinct('fecha');
     const sortedDates = allDates.sort((a, b) => new Date(b) - new Date(a));
-    
+
     const today = new Date();
-    const todayChile = new Date(today.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+    const todayChile = new Date(today.toLocaleString('en-US', { timeZone: 'America/Santiago' }));
     const todayStr = todayChile.toISOString().split('T')[0];
-    
+
     res.json({
       fechaActual: todayStr,
       fechaActualCompleta: todayChile.toISOString(),
       totalFechas: allDates.length,
       ultimas10Fechas: sortedDates.slice(0, 10),
-      hoyExiste: sortedDates.some(date => 
-        new Date(date).toISOString().split('T')[0] === todayStr
-      )
+      hoyExiste: sortedDates.some((date) => new Date(date).toISOString().split('T')[0] === todayStr)
     });
   } catch (error) {
-    console.error("Error en debug/dates:", error);
-    res.status(500).json({ error: "Error en el servidor" });
+    console.error('Error en debug/dates:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 
-// 2.1. Obtener estadísticas del día actual
 router.get('/statistics/today', async (req, res) => {
   try {
-    // Obtener fecha de hoy en zona horaria de Chile
     const today = new Date();
-    const todayChile = new Date(today.toLocaleString("en-US", {timeZone: "America/Santiago"}));
-    const todayStr = todayChile.toISOString().split('T')[0]; // YYYY-MM-DD
-    
-    // Para debug: mostrar fecha actual del sistema
-    console.log('🕐 Fecha del sistema (UTC):', today.toISOString());
-    console.log('🕐 Fecha del sistema (Chile):', todayChile.toISOString());
-    
-    console.log('📅 Obteniendo estadísticas para:', todayStr);
-    console.log('🕐 Fecha actual completa:', todayChile.toISOString());
-    
-    // Primero, verificar qué fechas existen en la base de datos
+    const todayChile = new Date(today.toLocaleString('en-US', { timeZone: 'America/Santiago' }));
+    const todayStr = todayChile.toISOString().split('T')[0];
+
     const allDates = await Tardiness.distinct('fecha');
     const sortedDates = allDates.sort((a, b) => new Date(b) - new Date(a));
-    console.log('📋 Fechas disponibles en BD (últimas 10):', sortedDates.slice(0, 10));
-    
-    // Calcular límites del día en zona horaria de Chile
-    const startOfDayChile = moment.tz(todayStr + ' 00:00:00', 'YYYY-MM-DD HH:mm:ss', 'America/Santiago').toDate();
-    const endOfDayChile = moment.tz(todayStr + ' 23:59:59.999', 'YYYY-MM-DD HH:mm:ss.SSS', 'America/Santiago').toDate();
 
-    // Obtener atrasos del día actual usando los límites calculados
-    let todayTardiness = await Tardiness.find({
+    const startOfDayChile = moment.tz(`${todayStr} 00:00:00`, 'YYYY-MM-DD HH:mm:ss', 'America/Santiago').toDate();
+    const endOfDayChile = moment.tz(`${todayStr} 23:59:59.999`, 'YYYY-MM-DD HH:mm:ss.SSS', 'America/Santiago').toDate();
+
+    const todayTardiness = await Tardiness.find({
       fecha: {
         $gte: startOfDayChile,
         $lte: endOfDayChile
       }
     }).sort({ fecha: -1 });
 
-    console.log('📊 Atrasos encontrados para hoy:', todayTardiness.length);
-    
-    // Eliminar fallbacks: solo devolver datos del día actual; si no hay, retornar vacío
-
-    // Obtener estudiantes únicos del día (para evitar duplicados)
     const uniqueStudents = new Map();
-    todayTardiness.forEach(record => {
+    todayTardiness.forEach((record) => {
       if (!uniqueStudents.has(record.studentRut)) {
         uniqueStudents.set(record.studentRut, record);
       }
     });
-    
+
     const uniqueTodayTardiness = Array.from(uniqueStudents.values());
 
-    // Calcular estadísticas del día (usando estudiantes únicos)
     const stats = {
-      total: uniqueTodayTardiness.length, // Solo estudiantes únicos
-      totalRecords: todayTardiness.length, // Total de registros (incluyendo duplicados)
-      withCertificate: uniqueTodayTardiness.filter(r => r.trajoCertificado).length,
-      withoutCertificate: uniqueTodayTardiness.filter(r => !r.trajoCertificado).length,
-      present: uniqueTodayTardiness.filter(r => r.concepto === 'presente').length,
-      latePresent: uniqueTodayTardiness.filter(r => r.concepto === 'atrasado-presente').length,
-      absent: uniqueTodayTardiness.filter(r => r.concepto === 'ausente').length,
+      total: uniqueTodayTardiness.length,
+      totalRecords: todayTardiness.length,
+      withCertificate: uniqueTodayTardiness.filter((r) => r.trajoCertificado).length,
+      withoutCertificate: uniqueTodayTardiness.filter((r) => !r.trajoCertificado).length,
+      present: uniqueTodayTardiness.filter((r) => r.concepto === 'presente').length,
+      latePresent: uniqueTodayTardiness.filter((r) => r.concepto === 'atrasado-presente').length,
+      absent: uniqueTodayTardiness.filter((r) => r.concepto === 'ausente').length,
       byCourse: {},
       byHour: {}
     };
 
-    // Agrupar por curso (usando estudiantes únicos)
-    uniqueTodayTardiness.forEach(record => {
+    uniqueTodayTardiness.forEach((record) => {
       if (!stats.byCourse[record.curso]) {
         stats.byCourse[record.curso] = 0;
       }
-      stats.byCourse[record.curso]++;
+      stats.byCourse[record.curso] += 1;
     });
 
-    // Agrupar por hora (usando estudiantes únicos)
-    uniqueTodayTardiness.forEach(record => {
+    uniqueTodayTardiness.forEach((record) => {
       const hour = record.hora.split(':')[0];
       if (!stats.byHour[hour]) {
         stats.byHour[hour] = 0;
       }
-      stats.byHour[hour]++;
+      stats.byHour[hour] += 1;
     });
 
     res.json({
       date: todayStr,
       stats,
-      tardiness: uniqueTodayTardiness, // Solo estudiantes únicos para el frontend
-      totalRecords: todayTardiness.length, // Total de registros (para debugging)
-      uniqueStudents: uniqueTodayTardiness.length // Estudiantes únicos (para debugging)
+      tardiness: uniqueTodayTardiness,
+      totalRecords: todayTardiness.length,
+      uniqueStudents: uniqueTodayTardiness.length,
+      availableDates: sortedDates.slice(0, 10)
     });
   } catch (error) {
-    console.error("Error en estadísticas del día:", error);
-    res.status(500).json({ error: "Error en el servidor" });
+    console.error('Error en estadísticas del día:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 
-// 2.2. Obtener estadísticas de la semana actual (CL)
 router.get('/statistics/week', async (req, res) => {
   try {
     const now = moment.tz('America/Santiago');
@@ -544,8 +403,8 @@ router.get('/statistics/week', async (req, res) => {
       fecha: { $gte: startOfWeek, $lte: endOfWeek }
     }).sort({ fecha: -1 });
 
-    // Estudiantes únicos en la semana
-    const uniqueStudents = new Set(weekTardiness.map(r => r.studentRut));
+    const uniqueStudents = new Set(weekTardiness.map((r) => r.studentRut));
+
     const stats = {
       total: uniqueStudents.size,
       totalRecords: weekTardiness.length
@@ -565,7 +424,6 @@ router.get('/statistics/week', async (req, res) => {
   }
 });
 
-// 2.3. Obtener estadísticas del mes actual (CL)
 router.get('/statistics/month', async (req, res) => {
   try {
     const now = moment.tz('America/Santiago');
@@ -576,7 +434,8 @@ router.get('/statistics/month', async (req, res) => {
       fecha: { $gte: startOfMonth, $lte: endOfMonth }
     }).sort({ fecha: -1 });
 
-    const uniqueStudents = new Set(monthTardiness.map(r => r.studentRut));
+    const uniqueStudents = new Set(monthTardiness.map((r) => r.studentRut));
+
     const stats = {
       total: uniqueStudents.size,
       totalRecords: monthTardiness.length
@@ -596,10 +455,10 @@ router.get('/statistics/month', async (req, res) => {
   }
 });
 
-// 3. Enviar reporte mensual a los apoderados
 router.get('/monthly-report', async (req, res) => {
   try {
     const { month, year } = req.query;
+
     const reportData = await Tardiness.find({
       fecha: {
         $gte: new Date(year, month - 1, 1),
@@ -608,13 +467,15 @@ router.get('/monthly-report', async (req, res) => {
     });
 
     const students = await Student.find();
+
     for (const student of students) {
-      // Comparamos usando "==" para que string y número se igualen en caso de discrepancia
-      const studentAtrasos = reportData.filter(a => a.studentRut == student.rut);
+      const studentAtrasos = reportData.filter((a) => a.studentRut == student.rut);
+
       if (studentAtrasos.length > 0) {
         const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
+
         let reporteTexto = `Reporte mensual de atrasos para ${nombreCompleto}:\n\n`;
-        studentAtrasos.forEach(a => {
+        studentAtrasos.forEach((a) => {
           reporteTexto += `Fecha: ${a.fecha.toLocaleDateString()}, Hora: ${a.hora}, Motivo: ${a.motivo}\n`;
         });
 
@@ -626,48 +487,72 @@ router.get('/monthly-report', async (req, res) => {
         };
 
         try {
-          const info = await sendMail(mailOptions);
-          console.log("Reporte mensual enviado:", info.response);
+          const info = await sendEmail(mailOptions);
+          console.log('Reporte mensual enviado:', info.response);
         } catch (error) {
-          console.error("Error al enviar reporte mensual:", error);
+          console.error('Error al enviar reporte mensual:', error);
         }
       }
     }
 
-    res.json({ message: "Reportes enviados" });
+    res.json({ message: 'Reportes enviados' });
   } catch (error) {
-    console.error("Error en reporte mensual:", error);
-    res.status(500).json({ error: "Error en el servidor" });
+    console.error('Error en reporte mensual:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 
-// 4. Obtener todos los atrasos
 router.get('/', async (req, res) => {
   try {
     const tardiness = await Tardiness.find().sort({ fecha: -1 });
     res.json(tardiness);
   } catch (error) {
-    console.error("Error al obtener atrasos:", error);
-    res.status(500).json({ error: "Error en el servidor" });
+    console.error('Error al obtener atrasos:', error);
+    res.status(500).json({ error: 'Error en el servidor' });
   }
 });
 
-// 5. Descargar certificado médico
 router.get('/certificado/:filename', ensureAuthenticated, (req, res) => {
   try {
-    const filename = req.params.filename;
-    const filePath = path.join(__dirname, '../uploads/certificados', filename);
-    
-    // Verificar que el archivo existe
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: "Archivo no encontrado" });
+    const { filename } = req.params;
+    const uploadsDir = path.resolve(__dirname, '../uploads/certificados');
+    const filePath = path.resolve(uploadsDir, filename);
+
+    // Verificar que el archivo resuelto esté dentro de la carpeta permitida
+    if (!filePath.startsWith(uploadsDir + path.sep)) {
+      return res.status(400).json({ error: 'Nombre de archivo no válido' });
     }
-    
-    // Enviar el archivo
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'Archivo no encontrado' });
+    }
+
     res.download(filePath);
   } catch (error) {
-    console.error("Error al descargar certificado:", error);
-    res.status(500).json({ error: "Error al descargar el archivo" });
+    console.error('Error al descargar certificado:', error);
+    res.status(500).json({ error: 'Error al descargar el archivo' });
+  }
+});
+
+// Eliminar un atraso por ID (solo admin)
+router.delete('/:id', ensureAuthenticated, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'No autorizado' });
+    }
+    const deleted = await Tardiness.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Registro no encontrado' });
+    }
+    await ActivityLog.create({
+      user: req.user.username,
+      action: 'Eliminar atraso',
+      details: `Atraso eliminado: RUT ${deleted.studentRut}, fecha ${deleted.fecha}`
+    });
+    res.json({ message: 'Atraso eliminado exitosamente' });
+  } catch (error) {
+    console.error('Error al eliminar atraso:', error);
+    res.status(500).json({ error: 'Error al eliminar el atraso' });
   }
 });
 

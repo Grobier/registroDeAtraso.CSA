@@ -1,6 +1,6 @@
 // src/pages/Login.jsx
 import React, { useState } from 'react';
-import { Container, Form, Button, Alert } from 'react-bootstrap';
+import { Form, Button, Alert } from 'react-bootstrap';
 import Spinner from 'react-bootstrap/Spinner';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
@@ -26,13 +26,13 @@ function Login({ onLogin }) {
         username,
         password
       }, {
-        withCredentials: true // <--- importante para autenticación con cookies
+        withCredentials: true
       });
+
       if (response.data.sessionId) {
-        // Guardar sesión, rol y username en localStorage
         localStorage.setItem('sessionId', response.data.sessionId);
         localStorage.setItem('role', response.data.role);
-        localStorage.setItem('username', username); // <-- Guarda el nombre de usuario
+        localStorage.setItem('username', username);
         localStorage.setItem('isAuthenticated', 'true');
         onLogin();
         navigate('/dashboard');
@@ -41,7 +41,7 @@ function Login({ onLogin }) {
       }
     } catch (error) {
       setMensaje(
-        error.response?.data?.message || 'Credenciales incorrectas o error de conexión'
+        error.response?.data?.message || 'Credenciales incorrectas o error de conexion'
       );
     } finally {
       setLoading(false);
@@ -58,13 +58,13 @@ function Login({ onLogin }) {
           <h2 className="login-title">Colegio Saint Arieli</h2>
           <p className="login-subtitle">Sistema de Control de Atrasos</p>
         </div>
-        
+
         {mensaje && (
           <Alert variant="danger" className="login-alert">
             {mensaje}
           </Alert>
         )}
-        
+
         <Form onSubmit={handleSubmit} className="login-form">
           <Form.Group className="form-group">
             <Form.Label>Usuario</Form.Label>
@@ -77,19 +77,19 @@ function Login({ onLogin }) {
           </Form.Group>
 
           <Form.Group className="form-group">
-            <Form.Label>Contraseña</Form.Label>
+            <Form.Label>Contrasena</Form.Label>
             <div style={{ position: 'relative' }}>
               <Form.Control
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Ingresa tu contraseña"
+                placeholder="Ingresa tu contrasena"
               />
               <Button
                 variant="link"
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 0, color: '#1a73e8' }}
+                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', padding: 0, color: '#8eb4ff' }}
                 tabIndex={-1}
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
@@ -110,13 +110,8 @@ function Login({ onLogin }) {
                 />
                 Cargando...
               </>
-            ) : 'Iniciar Sesión'}
+            ) : 'Iniciar Sesion'}
           </Button>
-
-          <div className="login-footer">
-            <p>Formando líderes del mañana</p>
-            <small>© {new Date().getFullYear()} Todos los derechos reservados</small>
-          </div>
         </Form>
       </div>
     </div>

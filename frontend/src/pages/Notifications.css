@@ -163,3 +163,275 @@
     font-size: 1rem !important;
   }
 }
+
+.notifications-table-shell {
+  max-height: 70vh;
+  overflow: auto;
+  border-radius: 1.6rem;
+}
+
+.notifications-student-table {
+  margin-bottom: 0 !important;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.notifications-student-table th,
+.notifications-student-table td {
+  padding: 0.78rem 0.6rem !important;
+  vertical-align: middle;
+}
+
+.notifications-student-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+.notifications-student-table th:nth-child(2),
+.notifications-student-table td:nth-child(2) {
+  min-width: 112px;
+}
+
+.notifications-student-table th:nth-child(3),
+.notifications-student-table td:nth-child(3) {
+  min-width: 280px;
+}
+
+.notifications-student-table th:nth-child(4),
+.notifications-student-table td:nth-child(4) {
+  min-width: 86px;
+}
+
+.notifications-student-table th:nth-child(5),
+.notifications-student-table td:nth-child(5) {
+  min-width: 240px;
+}
+
+.notifications-student-table th:nth-child(6),
+.notifications-student-table td:nth-child(6),
+.notifications-student-table th:nth-child(7),
+.notifications-student-table td:nth-child(7) {
+  min-width: 112px;
+}
+
+.notifications-student-table th:nth-child(8),
+.notifications-student-table td:nth-child(8) {
+  min-width: 136px;
+}
+
+.notifications-student-table th:nth-child(9),
+.notifications-student-table td:nth-child(9) {
+  min-width: 168px;
+}
+
+.notifications-student-table th:nth-child(10),
+.notifications-student-table td:nth-child(10) {
+  min-width: 154px;
+}
+
+.notifications-check-cell {
+  width: 52px;
+  text-align: center;
+}
+
+.notifications-row-check {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+}
+
+.notifications-row-check .form-check-input,
+.notifications-student-table .form-check-input {
+  margin: 0;
+}
+
+.notifications-name-cell {
+  max-width: 280px;
+}
+
+.notifications-email-cell {
+  max-width: 240px;
+}
+
+.notifications-compact-cell {
+  font-size: 0.84rem;
+}
+
+.notifications-pill-badge {
+  font-size: 0.78rem !important;
+  padding: 0.34rem 0.58rem !important;
+}
+
+.notifications-secondary-text {
+  font-size: 0.76rem;
+}
+
+.notifications-date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.notifications-action-btn {
+  min-height: 2.1rem !important;
+  padding: 0.25rem 0.7rem !important;
+  font-size: 0.72rem !important;
+  line-height: 1.1 !important;
+}
+
+.notifications-filter-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.notifications-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(238, 244, 255, 0.92);
+  color: #355682;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.notifications-mobile-list {
+  display: none;
+}
+
+.notifications-mobile-card {
+  margin-top: 0.9rem;
+}
+
+.notifications-mobile-card__top {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.notifications-mobile-card__identity {
+  min-width: 0;
+}
+
+.notifications-mobile-card__meta {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+  color: #355682;
+  font-size: 0.9rem;
+}
+
+.notifications-mobile-card__actions {
+  display: flex;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.notifications-empty-state {
+  margin-top: 1rem;
+}
+
+@media (max-width: 992px) {
+  .notifications-table-shell {
+    max-height: none;
+    border-radius: 1.25rem;
+  }
+
+  .notifications-student-table {
+    font-size: 0.88rem;
+  }
+
+  .notifications-student-table th,
+  .notifications-student-table td {
+    padding: 0.72rem 0.55rem !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .notifications-table-shell {
+    overflow: auto;
+  }
+
+  .notifications-filter-summary {
+    gap: 0.5rem;
+  }
+
+  .notifications-student-table th:nth-child(3),
+  .notifications-student-table td:nth-child(3) {
+    min-width: 220px;
+  }
+
+  .notifications-student-table th:nth-child(5),
+  .notifications-student-table td:nth-child(5) {
+    min-width: 200px;
+  }
+
+  .notifications-student-table th:nth-child(9),
+  .notifications-student-table td:nth-child(9),
+  .notifications-student-table th:nth-child(10),
+  .notifications-student-table td:nth-child(10) {
+    min-width: 132px;
+  }
+
+  .notifications-name-cell,
+  .notifications-email-cell {
+    max-width: none;
+  }
+}
+
+@media (max-width: 576px) {
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: 1rem;
+  }
+
+  .position-fixed {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    align-items: stretch !important;
+  }
+
+  .position-fixed .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .notifications-table-shell {
+    display: none;
+  }
+
+  .notifications-mobile-list {
+    display: block;
+  }
+
+  .notifications-pill-badge {
+    font-size: 0.72rem !important;
+  }
+
+  .notifications-action-btn {
+    min-height: 2rem !important;
+    padding: 0.2rem 0.55rem !important;
+  }
+
+  .notifications-filter-chip {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .notifications-mobile-card__top,
+  .notifications-mobile-card__actions {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .notifications-mobile-card__actions .btn {
+    width: 100%;
+  }
+}

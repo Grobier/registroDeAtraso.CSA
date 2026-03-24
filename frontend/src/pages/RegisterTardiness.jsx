@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Form, Button, Alert, Card, Row, Col, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { FaPlusCircle, FaWifi, FaClock, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlusCircle, FaWifi, FaExclamationTriangle } from 'react-icons/fa';
 import useOnlineStatus from '../hooks/useOnlineStatus';
 import ManualRegistrationModal from '../components/ManualRegistrationModal';
 import './RegisterTardiness.css';
@@ -22,7 +22,6 @@ const RegisterTardiness = () => {
   });
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [requiresCertificate, setRequiresCertificate] = useState(false);
   
   // Estados para registro manual
@@ -71,12 +70,10 @@ const RegisterTardiness = () => {
     }
   }, [selectedCourse]);
 
-  // Actualizar hora cada minuto y determinar si requiere certificado
+  // Determinar si requiere certificado
   useEffect(() => {
     const timer = setInterval(() => {
       const now = new Date();
-      setCurrentTime(now);
-      
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
       const minutosDesdeMedianoche = currentHour * 60 + currentMinute;
@@ -381,33 +378,25 @@ const RegisterTardiness = () => {
   return (
     <div className="register-tardiness-bg d-flex justify-content-center align-items-center" style={{ minHeight: '80vh' }}>
       <div className="register-tardiness-card animate__fadeIn">
+        <div className="register-status-topbar">
+          <div className={`badge register-status-badge register-status-badge--compact ${isOnline ? 'register-status-badge--online' : 'register-status-badge--offline'}`}>
+            {isOnline ? <FaWifi className="me-1" /> : <FaExclamationTriangle className="me-1" />}
+            {isOnline ? 'Conectado' : 'Sin conexión'}
+          </div>
+        </div>
+
         <div className="text-center mb-4">
-          <FaPlusCircle size={38} color="#1a73e8" style={{ marginBottom: '-7px', marginRight: '8px' }} />
-          <span className="register-tardiness-title">Registrar Atraso</span>
+          <div className="register-tardiness-heading">
+            <div className="register-tardiness-icon-wrap">
+              <FaPlusCircle size={34} />
+            </div>
+            <span className="register-tardiness-title">Registrar Atraso</span>
+          </div>
           
           {/* Indicadores de estado */}
-          <div className="mt-3">
-            <Row className="justify-content-center">
-              <Col md="auto">
-                <div className={`badge ${requiresCertificate ? 'bg-warning' : 'bg-success'} fs-6`}>
-                  <i className="fas fa-clock me-2"></i>
-                  Hora actual: {currentTime.toLocaleTimeString('es-CL', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </div>
-              </Col>
-              <Col md="auto">
-                <div className={`badge ${isOnline ? 'bg-success' : 'bg-danger'} fs-6`}>
-                  {isOnline ? <FaWifi className="me-2" /> : <FaExclamationTriangle className="me-2" />}
-                  {isOnline ? 'Conectado' : 'Sin conexión'}
-                </div>
-              </Col>
-
-            </Row>
-            
-            <div className="mt-2">
-              <small className={`text-${requiresCertificate ? 'warning' : 'success'}`}>
+          <div className="register-status-area mt-4">
+            <div className="register-status-copy mt-3">
+              <small className={`register-status-text ${requiresCertificate ? 'register-status-text--warning' : 'register-status-text--success'}`}>
                 {requiresCertificate 
                   ? '⚠️ Después de las 9:30 AM - Certificado médico OBLIGATORIO' 
                   : '✅ Antes de las 9:30 AM - No se requiere certificado médico'
@@ -416,11 +405,12 @@ const RegisterTardiness = () => {
             </div>
 
             {/* Botón de registro manual */}
-            <div className="mt-3">
+            <div className="mt-4">
               <Row className="justify-content-center">
                 <Col md="auto">
                   <Button 
-                    variant="outline-warning" 
+                    variant="outline-warning"
+                    className="register-manual-btn"
                     size="sm"
                     onClick={() => setShowManualModal(true)}
                   >
@@ -469,12 +459,12 @@ const RegisterTardiness = () => {
           </Form.Group>
 
           {/* Sección de Certificado Médico */}
-          <div className={`mb-4 p-3 border rounded ${requiresCertificate ? 'bg-warning bg-opacity-10 border-warning' : 'bg-light'}`}>
-            <h6 className="mb-3">
+          <div className={`register-certificate-panel mb-4 ${requiresCertificate ? 'register-certificate-panel--required' : 'register-certificate-panel--optional'}`}>
+            <h6 className="mb-3 register-certificate-title">
               <i className="fas fa-stethoscope me-2"></i>
               Certificado Médico
               {requiresCertificate && (
-                <span className="badge bg-warning ms-2">OBLIGATORIO</span>
+                <span className="badge register-required-badge ms-2">OBLIGATORIO</span>
               )}
             </h6>
             
@@ -516,7 +506,7 @@ const RegisterTardiness = () => {
               </Form.Group>
             )}
 
-            <div className={`alert ${requiresCertificate ? 'alert-warning' : 'alert-info'}`}>
+            <div className={`alert register-certificate-alert ${requiresCertificate ? 'alert-warning' : 'alert-info'}`}>
               <small>
                 {requiresCertificate ? (
                   <>

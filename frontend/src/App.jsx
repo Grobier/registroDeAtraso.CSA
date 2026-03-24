@@ -9,10 +9,13 @@ import RegisterTardiness from './pages/RegisterTardiness';
 import StudentManagement from './pages/StudentManagement';
 import CreateUser from './pages/CreateUser';
 import Notifications from './pages/Notifications';
+import Emergencies from './pages/Emergencies';
 import Logout from './components/Logout';
 import Footer from './components/Footer';
 import { FaSun, FaMoon, FaTachometerAlt, FaPlusCircle, FaUsers, FaUserPlus, FaHistory, FaUserCog, FaEnvelope } from 'react-icons/fa';  // <-- Importa los íconos
 import ActivityLog from './pages/ActivityLog';
+import './components/Navbar.css';
+import './styles/PageTheme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
 
@@ -120,36 +123,121 @@ function App() {
   // Manejar resize para sidebar responsivo
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 900) setSidebarOpen(false);
-      else setSidebarOpen(true);
+      if (window.innerWidth <= 900) {
+        setSidebarOpen(false);
+      } else {
+        setSidebarOpen(true);
+      }
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const handleSidebarToggle = () => {
+    if (window.innerWidth <= 900) {
+      setSidebarOpen((prev) => !prev);
+      return;
+    }
+
+    setSidebarCollapsed((prev) => !prev);
+  };
 
   // Función para manejar el click en enlaces del sidebar
   const handleSidebarLinkClick = () => {
     if (window.innerWidth <= 900) setSidebarOpen(false);
   };
 
+  useEffect(() => {
+    document.body.classList.toggle('auth-active', isAuthenticated);
+    document.body.classList.toggle('auth-inactive', !isAuthenticated);
+
+    return () => {
+      document.body.classList.remove('auth-active');
+      document.body.classList.remove('auth-inactive');
+    };
+  }, [isAuthenticated]);
+
+  const appRoutes = (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? <Navigate to="/dashboard" /> : <Navigate to="/login" />
+        }
+      />
+      <Route path="/login" element={<Login onLogin={handleLogin} />} />
+      <Route
+        path="/dashboard"
+        element={
+          isAuthenticated ? <Dashboard /> : <Navigate to="/login" />
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          isAuthenticated ? <RegisterTardiness /> : <Navigate to="/login" />
+        }
+      />
+      <Route
+        path="/students"
+        element={
+          isAuthenticated && (role === 'admin' || role === 'usuario') ? <StudentManagement /> : <Navigate to="/dashboard" />
+        }
+      />
+      <Route
+        path="/create-user"
+        element={
+          isAuthenticated && role === 'admin' ? <CreateUser /> : <Navigate to="/dashboard" />
+        }
+      />
+      <Route
+        path="/activity-log"
+        element={
+          isAuthenticated && role === 'admin' ? <ActivityLog /> : <Navigate to="/dashboard" />
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          isAuthenticated && (role === 'admin' || role === 'profesor') ? <Notifications /> : <Navigate to="/dashboard" />
+        }
+      />
+      <Route
+        path="/emergencies"
+        element={
+          isAuthenticated ? <Emergencies /> : <Navigate to="/login" />
+        }
+      />
+    </Routes>
+  );
+
   return (
     <>
       <div className="d-flex flex-column min-vh-100">
         {isAuthenticated && (
           <div className="session-topbar w-100 d-flex justify-content-between align-items-center px-4 py-2 shadow-sm">
-            <div className="d-flex align-items-center gap-2">
+            <div className="topbar-brand-group d-flex align-items-center gap-2">
               <button
-                className="btn btn-link text-primary fs-2 me-2 d-lg-none"
+                className="btn btn-link text-primary fs-2 me-2 topbar-menu-toggle"
                 style={{ textDecoration: 'none', boxShadow: 'none' }}
-                onClick={() => setSidebarOpen(!sidebarOpen)}
+                onClick={handleSidebarToggle}
               >
                 &#9776;
               </button>
-              <img src="/Logo.png" alt="Logo" width="40" height="40" className="me-2" />
-              <span style={{ fontWeight: 'bold', fontSize: '1.5rem', color: '#1a73e8', fontFamily: 'Montserrat, Segoe UI, Arial, sans-serif' }}>AtrasosApp</span>
+              <div className="topbar-brand-badge">
+                <img src="/Logo.png" alt="Logo" width="40" height="40" className="me-2" />
+                <div className="topbar-brand-copy">
+                  <span className="topbar-brand-title">AtrasosApp</span>
+                  <small className="topbar-brand-subtitle">Control escolar</small>
+                </div>
+              </div>
             </div>
-            <div className="d-flex align-items-center">
-              <div style={{ color: '#185abc', fontWeight: 'bold', fontSize: '1.15rem', marginRight: 16, fontFamily: 'Montserrat, Segoe UI, Arial, sans-serif' }}>
+            <div className="topbar-user-group d-flex align-items-center">
+              <Link to="/emergencies" className="btn btn-danger btn-sm topbar-emergency-btn topbar-desktop-only">
+                🚑 Emergencias
+              </Link>
+              <div className="topbar-user-chip">
+                <span className="topbar-user-label">Usuario activo</span>
                 {`Bienvenido, ${localStorage.getItem('username') || ''}`}
               </div>
               <button
@@ -160,7 +248,7 @@ function App() {
                   localStorage.removeItem('sessionId');
                   setIsAuthenticated(false);
                 }}
-                className="btn btn-warning btn-sm"
+                className="btn btn-warning btn-sm topbar-logout-btn topbar-desktop-only"
                 style={{ minWidth: 120 }}
               >
                 Cerrar sesión
@@ -172,8 +260,6 @@ function App() {
           {isAuthenticated && sidebarOpen && (
             <div
               className={`sidebar-navbar d-flex flex-column align-items-center py-4 px-2${sidebarCollapsed ? ' collapsed' : ''}`}
-              onMouseEnter={() => setSidebarCollapsed(false)}
-              onMouseLeave={() => setSidebarCollapsed(true)}
             >
 
               <nav className="flex-grow-1 w-100">
@@ -230,12 +316,34 @@ function App() {
                       </Link>
                     </li>
                   )}
+                  <li className="nav-item mb-2 sidebar-mobile-only">
+                    <Link to="/emergencies" className="nav-link nav-link-custom nav-link-emergency w-100 d-flex align-items-center gap-2" onClick={handleSidebarLinkClick}>
+                      <span aria-hidden="true">🚑</span>
+                      <span className="sidebar-link-text">Emergencias</span>
+                    </Link>
+                  </li>
+                  <li className="nav-item mb-2 sidebar-mobile-only">
+                    <button
+                      className="btn btn-gestionar-usuarios nav-link-custom nav-link-logout w-100 d-flex align-items-center gap-2"
+                      onClick={() => {
+                        localStorage.removeItem('isAuthenticated');
+                        localStorage.removeItem('username');
+                        localStorage.removeItem('role');
+                        localStorage.removeItem('sessionId');
+                        setIsAuthenticated(false);
+                        handleSidebarLinkClick();
+                      }}
+                    >
+                      <span aria-hidden="true">↩</span>
+                      <span className="sidebar-link-text">Cerrar sesión</span>
+                    </button>
+                  </li>
                 </ul>
               </nav>
             </div>
           )}
-          <div className={`flex-grow-1 d-flex flex-column main-content-area${sidebarOpen ? (sidebarCollapsed ? ' sidebar-collapsed' : ' sidebar-expanded') : ''}`}>
-            <Container className={!isAuthenticated ? 'p-0 m-0 mw-100 flex-grow-1' : 'mt-3 flex-grow-1'}>
+          <div className={`flex-grow-1 d-flex flex-column${isAuthenticated ? ` main-content-area${sidebarOpen ? (sidebarCollapsed ? ' sidebar-collapsed' : ' sidebar-expanded') : ''}` : ''}`}>
+            <Container fluid={!isAuthenticated} className={!isAuthenticated ? 'auth-route-container p-0 m-0 flex-grow-1' : 'mt-3 flex-grow-1'}>
               <Routes>
             <Route
               path="/"
@@ -285,9 +393,15 @@ function App() {
                     isAuthenticated && (role === 'admin' || role === 'profesor') ? <Notifications /> : <Navigate to="/dashboard" />
                   }
                 />
+                <Route
+                  path="/emergencies"
+                  element={
+                    isAuthenticated ? <Emergencies /> : <Navigate to="/login" />
+                  }
+                />
               </Routes>
             </Container>
-            <Footer />
+            {isAuthenticated && <Footer withSidebar={isAuthenticated} />}
             
             {/* Modal de gestión de usuarios (solo admin) */}
             <Modal 
@@ -296,6 +410,7 @@ function App() {
               size="xl"
               centered
               className="user-management-modal"
+              contentClassName="page-modal"
             >
               <Modal.Header closeButton className="border-0 pb-0">
                 <Modal.Title className="fw-bold text-dark">
@@ -415,7 +530,7 @@ function App() {
             </Modal>
             
             {/* Modal para editar usuario */}
-            <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
+            <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered contentClassName="page-modal">
               <Modal.Header closeButton className="border-0 pb-0">
                 <Modal.Title className="fw-bold text-dark">
                   ✏️ Editar Usuario
@@ -484,7 +599,7 @@ function App() {
             </Modal>
             
             {/* Modal para resetear contraseña */}
-            <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)} centered>
+            <Modal show={showPasswordModal} onHide={() => setShowPasswordModal(false)} centered contentClassName="page-modal">
               <Modal.Header closeButton className="border-0 pb-0">
                 <Modal.Title className="fw-bold text-dark">
                   🔑 Resetear Contraseña

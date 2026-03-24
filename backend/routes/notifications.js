@@ -6,6 +6,8 @@ const Tardiness = require('../models/Tardiness');
 const EmailLog = require('../models/EmailLog');
 const { sendEmail } = require('../config/emailConfig');
 const { ensureAuthenticated } = require('../middlewares/auth');
+const moment = require('moment-timezone');
+const TIMEZONE = 'America/Santiago';
 
 // Obtener estudiantes con atrasos ordenados por cantidad
 router.get('/students-with-tardiness', ensureAuthenticated, async (req, res) => {
@@ -144,9 +146,9 @@ router.get('/students-with-tardiness-by-date', ensureAuthenticated, async (req, 
       return res.status(400).json({ message: 'Fecha de inicio y fin son requeridas' });
     }
 
-    // Crear fechas de inicio y fin con zona horaria de Chile
-    const start = new Date(startDate + 'T00:00:00.000-03:00'); // Chile timezone
-    const end = new Date(endDate + 'T23:59:59.999-03:00'); // Chile timezone
+    // Crear fechas de inicio y fin con zona horaria de Chile (respeta horario de verano)
+    const start = moment.tz(startDate, 'YYYY-MM-DD', TIMEZONE).startOf('day').toDate();
+    const end = moment.tz(endDate, 'YYYY-MM-DD', TIMEZONE).endOf('day').toDate();
     
     console.log('🕐 Fecha inicio procesada:', start);
     console.log('🕐 Fecha inicio UTC:', start.toISOString());

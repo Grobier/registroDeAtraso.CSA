@@ -155,12 +155,14 @@ const authRoutes = require('./routes/auth');
 const tardinessRoutes = require('./routes/tardiness');
 const activityLogRoutes = require('./routes/activityLog');
 const notificationsRoutes = require('./routes/notifications');
+const emergenciesRoutes = require('./routes/emergencies');
 
 app.use('/api/students', studentsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/tardiness', tardinessRoutes);
 app.use('/api/activity-log', activityLogRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/emergencies', emergenciesRoutes);
 
 // SPA: redirigir todo a index.html (excepto /api)
 app.get('*', (req, res) => {

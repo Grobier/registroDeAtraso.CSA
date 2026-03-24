@@ -133,16 +133,14 @@ router.post('/register', ensureAuthenticated, async (req, res) => {
 // Ruta para cambiar contraseña
 router.post('/change-password', ensureAuthenticated, async (req, res) => {
   try {
-    const { currentPassword, newPassword, sessionId } = req.body;
+    const { currentPassword, newPassword } = req.body;
 
-    // Buscar la sesión
-    const session = await Session.findById(sessionId);
-    if (!session) {
-      return res.status(401).json({ message: 'Sesión no válida' });
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'La nueva contraseña debe tener al menos 6 caracteres' });
     }
 
-    // Buscar usuario
-    const user = await User.findById(session.userId);
+    // Usar el usuario autenticado directamente desde la sesión
+    const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: 'Usuario no encontrado' });
     }
@@ -208,6 +206,9 @@ router.post('/users/:id/reset-password', ensureAuthenticated, async (req, res) =
   if (req.user.role !== 'admin') return res.status(403).json({ message: 'No autorizado' });
   try {
     const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: 'La contraseña debe tener al menos 6 caracteres' });
+    }
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ message: 'Usuario no encontrado' });
     user.password = newPassword;

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Form, Button, Alert, Container, Row, Col } from 'react-bootstrap';
+import '../styles/PageTheme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
 
@@ -39,12 +40,16 @@ const CreateUser = () => {
   };
 
   return (
-    <Container className="mt-4">
+    <Container className="page-shell page-shell--narrow">
       <Row className="justify-content-center">
         <Col md={6}>
-          <h2 className="text-center mb-4">Crear Usuario</h2>
+          <div className="page-title-block text-center">
+            <h1 className="page-title">Crear Usuario</h1>
+            <p className="page-subtitle">Registra nuevas cuentas con el mismo estilo claro del panel principal.</p>
+          </div>
           {message && <Alert variant="success">{message}</Alert>}
           {error && <Alert variant="danger">{error}</Alert>}
+          <div className="page-panel">
           <Form onSubmit={handleSubmit}>
             <Form.Group controlId="formUsername" className="mb-3">
               <Form.Label>Nombre de Usuario</Form.Label>
@@ -79,7 +84,7 @@ const CreateUser = () => {
                 required
               />
             </Form.Group>
-            <Form.Group controlId="formRole" className="mb-3">
+            <Form.Group controlId="formRole" className="mb-4">
               <Form.Label>Rol</Form.Label>
               <Form.Select name="role" value={formData.role} onChange={handleChange} required>
                 <option value="usuario">Usuario</option>
@@ -93,6 +98,7 @@ const CreateUser = () => {
               </Button>
             </div>
           </Form>
+          </div>
         </Col>
       </Row>
     </Container>

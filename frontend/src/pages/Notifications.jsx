@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaEnvelope, FaUsers, FaChartBar, FaHistory, FaSearch, FaFilter, FaCalendarAlt, FaFileExcel } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import '../styles/PageTheme.css';
 import './Notifications.css';
 
 // Configuración de la API
@@ -33,39 +34,39 @@ const StudentRow = memo(({
 
   return (
     <tr>
-      <td style={{ textAlign: 'center', width: '40px' }}>
+      <td className="notifications-check-cell">
         <Form.Check
           type="checkbox"
           checked={isSelected}
           onChange={(e) => onSelect(student.rut, e.target.checked)}
-          style={{ margin: '0 auto' }}
+          className="notifications-row-check"
         />
       </td>
       <td>{student.rut}</td>
-      <td className="text-truncate" style={{ maxWidth: '200px' }} title={`${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`}>
+      <td className="text-truncate notifications-name-cell" title={`${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`}>
         {student.nombres} {student.apellidosPaterno} {student.apellidosMaterno}
       </td>
       <td>{student.curso}</td>
-      <td className="text-truncate" style={{ maxWidth: '150px' }} title={student.correoApoderado}>
+      <td className="text-truncate notifications-email-cell" title={student.correoApoderado}>
         {student.correoApoderado}
       </td>
       <td>
-        <Badge bg={getTardinessColor(student.totalAtrasos)}>
+        <Badge bg={getTardinessColor(student.totalAtrasos)} className="notifications-pill-badge">
           {student.totalAtrasos}
         </Badge>
       </td>
-      <td className="text-center" style={{ fontSize: '0.8rem' }}>
-        <Badge bg={student.totalCertificados > 0 ? 'info' : 'secondary'}>
+      <td className="text-center notifications-compact-cell">
+        <Badge bg={student.totalCertificados > 0 ? 'info' : 'secondary'} className="notifications-pill-badge">
           🏥 {student.totalCertificados || 0}
         </Badge>
       </td>
-      <td className="text-center" style={{ fontSize: '0.8rem' }}>
+      <td className="text-center notifications-compact-cell">
         {student.atrasos && student.atrasos.length > 0 ? (
-          <div>
+          <div className="notifications-date-cell">
             <div className="fw-bold text-primary">
               {new Date(student.atrasos[0].fecha).toLocaleDateString('es-CL')}
             </div>
-            <div className="text-muted" style={{ fontSize: '0.75rem' }}>
+            <div className="text-muted notifications-secondary-text">
               {student.atrasos[0].hora}
             </div>
           </div>
@@ -75,10 +76,10 @@ const StudentRow = memo(({
       </td>
       <td>
         {student.atrasos && student.atrasos.length > 0 ? (
-          <div className="d-flex flex-column gap-1">
+          <div className="d-flex flex-column gap-2">
             <Badge 
               bg={getConceptoColor(student.atrasos[0].concepto)}
-              style={{ cursor: 'pointer', fontSize: '0.7rem' }}
+              className="notifications-pill-badge"
               title="Click para ver todos los conceptos de atrasos"
             >
               {getConceptoLabel(student.atrasos[0].concepto)}
@@ -88,7 +89,7 @@ const StudentRow = memo(({
               size="sm"
               onClick={() => handleShowDetails(student)}
               title="Ver todos los conceptos"
-              style={{ fontSize: '0.65rem', padding: '1px 4px', lineHeight: '1' }}
+              className="notifications-action-btn"
             >
               Ver
             </Button>
@@ -97,15 +98,15 @@ const StudentRow = memo(({
           <small className="text-muted">N/A</small>
         )}
       </td>
-      <td className="text-center" style={{ fontSize: '0.8rem' }}>
-        <div className="d-flex flex-column gap-1">
+      <td className="text-center notifications-compact-cell">
+        <div className="d-flex flex-column gap-2">
           <Badge 
             bg={punctuality.color} 
-            style={{ fontSize: '0.7rem' }}
+            className="notifications-pill-badge"
           >
             {punctuality.percentage}%
           </Badge>
-          <div className="text-muted" style={{ fontSize: '0.7rem' }}>
+          <div className="text-muted notifications-secondary-text">
             {punctuality.grade}
           </div>
           <Button
@@ -113,7 +114,7 @@ const StudentRow = memo(({
             size="sm"
             onClick={() => handleShowPunctualityAnalysis(student)}
             title="Ver análisis detallado de puntualidad"
-            style={{ fontSize: '0.6rem', padding: '1px 4px', lineHeight: '1' }}
+            className="notifications-action-btn"
           >
             📊
           </Button>
@@ -1606,7 +1607,7 @@ Equipo Directivo`
   }
 
   return (
-    <Container fluid className="py-4">
+    <Container fluid className="page-shell py-4 notifications-page">
       {/* Breadcrumb */}
       <Breadcrumb className="mb-4">
         <Breadcrumb.Item linkAs={Link} linkProps={{ to: "/dashboard" }}>Inicio</Breadcrumb.Item>
@@ -1614,11 +1615,11 @@ Equipo Directivo`
       </Breadcrumb>
 
       {/* Título de la página */}
-      <Row className="mb-4">
+      <Row className="page-title-block">
         <Col>
           <div className="d-flex justify-content-between align-items-start">
             <div>
-              <h1 className="d-flex align-items-center gap-3 mb-3">
+              <h1 className="page-title d-flex align-items-center gap-3 mb-3">
                 <FaEnvelope className="text-primary" size={32} />
                 Notificaciones por Correo a Apoderados
               </h1>
@@ -1881,7 +1882,7 @@ Equipo Directivo`
                             value={startDate || ''}
                             onChange={(e) => setStartDate(e.target.value)}
                             placeholder="Desde"
-                            max="2025-12-31"
+                            max={new Date().toISOString().split('T')[0]}
                           />
                         </InputGroup>
                       </Col>
@@ -1896,15 +1897,36 @@ Equipo Directivo`
                             value={endDate || ''}
                             onChange={(e) => setEndDate(e.target.value)}
                             placeholder="Hasta"
-                            max="2025-12-31"
+                            max={new Date().toISOString().split('T')[0]}
                           />
                         </InputGroup>
                       </Col>
                     </Row>
+                    <Row className="mt-1">
+                      <Col>
+                        <small className="text-muted">
+                          🕐 Zona horaria: America/Santiago (UTC{(() => {
+                            const offset = -new Date().getTimezoneOffset();
+                            const h = Math.floor(Math.abs(offset) / 60).toString().padStart(2, '0');
+                            const m = (Math.abs(offset) % 60).toString().padStart(2, '0');
+                            return (offset >= 0 ? '+' : '-') + h + ':' + m;
+                          })()})
+                        </small>
+                      </Col>
+                    </Row>
+                    {(searchTerm || startDate || endDate || minTardinessFilter || punctualityFilter) && (
+                      <div className="notifications-filter-summary mt-3">
+                        {searchTerm && <span className="notifications-filter-chip">Búsqueda: "{searchTerm}"</span>}
+                        {minTardinessFilter && <span className="notifications-filter-chip">Mínimo: {minTardinessFilter}+ atrasos</span>}
+                        {punctualityFilter && <span className="notifications-filter-chip">Calificación: {punctualityFilter}</span>}
+                        {startDate && <span className="notifications-filter-chip">Desde: {new Date(startDate).toLocaleDateString('es-CL')}</span>}
+                        {endDate && <span className="notifications-filter-chip">Hasta: {new Date(endDate).toLocaleDateString('es-CL')}</span>}
+                      </div>
+                    )}
                   </div>
                 </Col>
               </Row>
-              
+
               {loading ? (
                 <div className="text-center py-5">
                   <div className="mb-3">
@@ -1916,42 +1938,12 @@ Equipo Directivo`
                   <p className="text-muted mb-0">Obteniendo información de estudiantes</p>
                 </div>
               ) : (
-                <div className="table-responsive" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                  <Table striped bordered hover size="sm" className="table-compact" style={{
-                    fontSize: '0.85rem',
-                    lineHeight: '1.2',
-                    marginBottom: '0'
-                  }}>
-                    <style>{`
-                      .table-compact th,
-                      .table-compact td {
-                        padding: 0.4rem 0.3rem !important;
-                        vertical-align: middle;
-                      }
-                      .table-compact .badge {
-                        font-size: 0.7rem !important;
-                        padding: 0.25em 0.4em;
-                      }
-                      .table-compact .btn {
-                        font-size: 0.65rem !important;
-                        padding: 0.2rem 0.4rem;
-                        line-height: 1;
-                      }
-                      .table-compact .form-check {
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        margin: 0;
-                        padding: 0;
-                      }
-                      .table-compact .form-check-input {
-                        margin: 0;
-                        transform: scale(0.8);
-                      }
-                    `}</style>
+                <>
+                <div className="table-responsive notifications-table-shell">
+                  <Table striped bordered hover size="sm" className="table-compact notifications-student-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '40px', textAlign: 'center' }}>
+                        <th style={{ width: '52px', textAlign: 'center' }}>
                           <Form.Check
                             type="checkbox"
                             checked={
@@ -1970,19 +1962,19 @@ Equipo Directivo`
                             }}
                             onChange={(e) => handleSelectAll(e.target.checked)}
                             title="Seleccionar todos los estudiantes visibles"
-                            style={{ margin: '0 auto' }}
+                            className="notifications-row-check"
                           />
                         </th>
-                        <th style={{ width: '80px' }}>RUT</th>
-                        <th style={{ width: '200px' }}>Nombre Completo</th>
-                        <th style={{ width: '60px' }}>Curso</th>
-                        <th style={{ width: '150px' }}>Email Apoderado</th>
-                        <th style={{ width: '80px' }}>
+                        <th style={{ width: '112px' }}>RUT</th>
+                        <th style={{ width: '280px' }}>Nombre Completo</th>
+                        <th style={{ width: '86px' }}>Curso</th>
+                        <th style={{ width: '240px' }}>Email Apoderado</th>
+                        <th style={{ width: '110px' }}>
                           {startDate && endDate ? 'Atrasos del Período' : 
                             minTardinessFilter ? `Atrasos (≥${minTardinessFilter})` : 
                             'Total Atrasos'}
                         </th>
-                        <th style={{ width: '80px' }}>Certificados</th>
+                        <th style={{ width: '112px' }}>Certificados</th>
                         <th style={{ width: '100px' }}>Último Atraso</th>
                         <th style={{ width: '120px' }}>Concepto Último Atraso</th>
                         <th style={{ width: '100px' }}>Calificación Mensual</th>
@@ -2008,6 +2000,52 @@ Equipo Directivo`
                     </tbody>
                   </Table>
                 </div>
+                <div className="notifications-mobile-list">
+                  {currentStudents.map((student) => {
+                    const punctuality = calculateMonthlyPunctuality(student, getCurrentMonth(), getCurrentYear());
+                    return (
+                      <Card key={student.rut} className="notifications-mobile-card">
+                        <Card.Body>
+                          <div className="notifications-mobile-card__top">
+                            <Form.Check
+                              type="checkbox"
+                              checked={selectedStudents.includes(student.rut)}
+                              onChange={(e) => handleStudentSelection(student.rut, e.target.checked)}
+                            />
+                            <div className="notifications-mobile-card__identity">
+                              <div className="fw-bold">{student.nombres} {student.apellidosPaterno}</div>
+                              <small className="text-muted">{student.rut}</small>
+                            </div>
+                            <Badge bg={getTardinessColor(student.totalAtrasos)}>{student.totalAtrasos}</Badge>
+                          </div>
+                          <div className="notifications-mobile-card__meta">
+                            <div><strong>Curso:</strong> {student.curso}</div>
+                            <div><strong>Correo:</strong> {student.correoApoderado}</div>
+                            <div><strong>Certificados:</strong> {student.totalCertificados || 0}</div>
+                            <div><strong>Puntualidad:</strong> {punctuality.percentage}% ({punctuality.grade})</div>
+                            {student.atrasos && student.atrasos.length > 0 && (
+                              <>
+                                <div><strong>Último atraso:</strong> {new Date(student.atrasos[0].fecha).toLocaleDateString('es-CL')} {student.atrasos[0].hora}</div>
+                                <div><strong>Concepto:</strong> {getConceptoLabel(student.atrasos[0].concepto)}</div>
+                              </>
+                            )}
+                          </div>
+                          <div className="notifications-mobile-card__actions">
+                            {student.atrasos && student.atrasos.length > 0 && (
+                              <Button variant="outline-primary" size="sm" onClick={() => handleShowDetails(student)}>
+                                Ver conceptos
+                              </Button>
+                            )}
+                            <Button variant="outline-primary" size="sm" onClick={() => handleShowPunctualityAnalysis(student)}>
+                              Ver puntualidad
+                            </Button>
+                          </div>
+                        </Card.Body>
+                      </Card>
+                    );
+                  })}
+                </div>
+                </>
               )}
               
 

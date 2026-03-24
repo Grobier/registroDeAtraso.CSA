@@ -172,32 +172,51 @@ router.post('/', ensureAuthenticated, checkRole(['admin', 'usuario']), async (re
   }
 });
 
-// Importación masiva de estudiantes
+// Importación masiva de estudiantes (upsert + eliminar los que no están en el archivo)
 router.post('/bulk', ensureAuthenticated, checkRole(['admin', 'usuario']), async (req, res) => {
   try {
     const students = req.body;
-    const insertedStudents = await Student.insertMany(students, { ordered: false });
-    // Registrar actividad
+    if (!students || students.length === 0) {
+      return res.status(400).json({ message: 'El archivo no contiene estudiantes' });
+    }
+
+    const rutsEnArchivo = students.map(s => s.rut);
+
+    // Upsert de todos los alumnos del archivo
+    const operations = students.map(s => ({
+      updateOne: {
+        filter: { rut: s.rut },
+        update: { $set: {
+          nombres: s.nombres,
+          apellidosPaterno: s.apellidosPaterno,
+          apellidosMaterno: s.apellidosMaterno,
+          curso: s.curso,
+          correoApoderado: s.correoApoderado,
+          estado: 'activo'
+        }},
+        upsert: true
+      }
+    }));
+    const result = await Student.bulkWrite(operations);
+
+    // Eliminar alumnos que NO están en el archivo
+    const deleteResult = await Student.deleteMany({ rut: { $nin: rutsEnArchivo } });
+
     let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
     await ActivityLog.create({
       user: performedBy,
       action: 'Importar estudiantes',
-      details: `Estudiantes importados: ${insertedStudents.length}`
+      details: `Nuevos: ${result.upsertedCount}, Actualizados: ${result.modifiedCount}, Eliminados: ${deleteResult.deletedCount}`
     });
+
     res.status(201).json({
-      message: 'Estudiantes importados exitosamente',
-      count: insertedStudents.length
+      message: 'Nómina actualizada exitosamente',
+      nuevos: result.upsertedCount,
+      actualizados: result.modifiedCount,
+      eliminados: deleteResult.deletedCount
     });
   } catch (error) {
-    // Manejar errores de duplicados
-    if (error.code === 11000) {
-      res.status(400).json({
-        message: 'Algunos estudiantes no pudieron ser importados debido a RUTs duplicados',
-        error: error.message
-      });
-    } else {
-      res.status(500).json({ message: error.message });
-    }
+    res.status(500).json({ message: error.message });
   }
 });
 
@@ -239,204 +258,6 @@ router.put('/:id', ensureAuthenticated, checkRole(['admin', 'usuario']), async (
   }
 });
 
-// Promoción individual de un estudiante
-router.post('/:id/promote', ensureAuthenticated, checkRole(['admin', 'usuario']), async (req, res) => {
-  try {
-    const student = await Student.findById(req.params.id);
-    if (!student) {
-      return res.status(404).json({ message: 'Estudiante no encontrado' });
-    }
-
-    // Verificar si el estudiante repite
-    if (student.repite) {
-      return res.status(400).json({ 
-        message: 'No se puede promover a un estudiante repitente. Primero debe desmarcarlo como repitente.' 
-      });
-    }
-
-    // Reglas de mapeo de cursos
-    const courseMapping = {
-      'PRE-K': 'kinder',
-      'kinder': '1°A',
-      '1°A': '2°A',
-      '2°A': '3°A',
-      '3°A': '4°A',
-      '4°A': '5°A',
-      '5°A': '6°A',
-      '6°A': '7°A',
-      '7°A': '8°A',
-      '8°A': 'I°M',
-      'I°M': 'II°M',
-      'II°M': 'III°M',
-      'III°M': 'IV°M'
-    };
-
-    const currentCourse = student.curso;
-    const nextCourse = courseMapping[currentCourse];
-
-    if (nextCourse) {
-      // Actualizar el curso del estudiante
-      student.curso = nextCourse;
-      await student.save();
-      
-      // Registrar actividad
-      let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
-      await ActivityLog.create({
-        user: performedBy,
-        action: 'Promoción individual',
-        details: `Estudiante promovido: ${student.nombres} ${student.apellidosPaterno} de ${currentCourse} a ${nextCourse}`
-      });
-
-      res.json({
-        message: 'Estudiante promovido exitosamente',
-        student: {
-          nombre: `${student.nombres} ${student.apellidosPaterno}`,
-          from: currentCourse,
-          to: nextCourse
-        }
-      });
-    } else if (currentCourse === 'IV°M') {
-      // Estudiante de IV°M - Egresar
-      student.estado = 'egresado';
-      student.añoEgreso = new Date().getFullYear();
-      student.fechaEgreso = new Date();
-      await student.save();
-      
-      // Registrar actividad
-      let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
-      await ActivityLog.create({
-        user: performedBy,
-        action: 'Egreso individual',
-        details: `Estudiante egresado: ${student.nombres} ${student.apellidosPaterno} de ${currentCourse}`
-      });
-
-      res.json({
-        message: 'Estudiante egresado exitosamente',
-        student: {
-          nombre: `${student.nombres} ${student.apellidosPaterno}`,
-          from: currentCourse,
-          to: 'Egresado'
-        }
-      });
-    } else {
-      res.status(400).json({ 
-        message: 'No se puede promover este estudiante. Ya está en el último curso de su modalidad.' 
-      });
-    }
-  } catch (error) {
-    console.error('Error en promoción individual:', error);
-    res.status(500).json({ 
-      message: 'Error al realizar la promoción individual',
-      error: error.message 
-    });
-  }
-});
-
-// Promoción masiva de estudiantes al siguiente curso
-router.post('/promote', ensureAuthenticated, checkRole(['admin', 'usuario']), async (req, res) => {
-  try {
-    // Reglas de mapeo de cursos
-    const courseMapping = {
-      'PRE-K': 'kinder',
-      'kinder': '1°A',
-      '1°A': '2°A',
-      '2°A': '3°A',
-      '3°A': '4°A',
-      '4°A': '5°A',
-      '5°A': '6°A',
-      '6°A': '7°A',
-      '7°A': '8°A',
-      '8°A': 'I°M',
-      'I°M': 'II°M',
-      'II°M': 'III°M',
-      'III°M': 'IV°M'
-      // IV°M no tiene siguiente curso (último año)
-    };
-
-    // Obtener todos los estudiantes
-    const allStudents = await Student.find({});
-    let promotedCount = 0;
-    let skippedCount = 0;
-    const promotionLog = [];
-
-    // Procesar cada estudiante
-    for (const student of allStudents) {
-      const currentCourse = student.curso;
-      const nextCourse = courseMapping[currentCourse];
-
-      // Verificar si el estudiante repite
-      if (student.repite) {
-        skippedCount++;
-        promotionLog.push({
-          student: `${student.nombres} ${student.apellidosPaterno}`,
-          from: currentCourse,
-          to: 'Sin cambios',
-          reason: 'Repitente - Mantiene curso actual'
-        });
-        continue; // Saltar al siguiente estudiante
-      }
-
-      if (nextCourse) {
-        // Actualizar el curso del estudiante
-        student.curso = nextCourse;
-        await student.save();
-        promotedCount++;
-        
-        promotionLog.push({
-          student: `${student.nombres} ${student.apellidosPaterno}`,
-          from: currentCourse,
-          to: nextCourse
-        });
-      } else if (currentCourse === 'IV°M') {
-        // Estudiante de IV°M - Egresar
-        student.estado = 'egresado';
-        student.añoEgreso = new Date().getFullYear();
-        student.fechaEgreso = new Date();
-        await student.save();
-        promotedCount++;
-        
-        promotionLog.push({
-          student: `${student.nombres} ${student.apellidosPaterno}`,
-          from: currentCourse,
-          to: 'Egresado',
-          reason: 'Completó IV°M - Egresado del sistema'
-        });
-      } else {
-        // Otros casos sin siguiente curso
-        skippedCount++;
-        promotionLog.push({
-          student: `${student.nombres} ${student.apellidosPaterno}`,
-          from: currentCourse,
-          to: 'Sin siguiente curso',
-          reason: 'Curso no mapeado'
-        });
-      }
-    }
-
-    // Registrar actividad
-    let performedBy = (req.user && req.user.username) ? req.user.username : 'Desconocido';
-    await ActivityLog.create({
-      user: performedBy,
-      action: 'Promoción masiva de cursos',
-      details: `Promovidos: ${promotedCount}, Sin cambios: ${skippedCount}`
-    });
-
-    res.json({
-      message: 'Promoción de cursos completada exitosamente',
-      promoted: promotedCount,
-      skipped: skippedCount,
-      total: allStudents.length,
-      log: promotionLog
-    });
-
-  } catch (error) {
-    console.error('Error en promoción masiva:', error);
-    res.status(500).json({ 
-      message: 'Error al realizar la promoción masiva',
-      error: error.message 
-    });
-  }
-});
 
 // Eliminar estudiante
 router.delete('/:id', ensureAuthenticated, checkRole(['admin', 'usuario']), async (req, res) => {
@@ -463,3 +284,4 @@ router.delete('/:id', ensureAuthenticated, checkRole(['admin', 'usuario']), asyn
 });
 
 module.exports = router;
+
