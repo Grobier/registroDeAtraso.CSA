@@ -329,6 +329,10 @@
   box-shadow: 0 28px 60px rgba(36, 64, 108, 0.2);
 }
 
+.page-modal {
+  max-width: min(720px, calc(100vw - 2rem));
+}
+
 .page-modal .modal-header,
 .page-modal .modal-footer {
   background: rgba(246, 250, 255, 0.94);
