@@ -61,7 +61,7 @@ const createDefaultAttention = () => ({
   observaciones_libres: ''
 });
 
-const fetchJsonWithTimeout = async (url, options = {}, timeoutMs = 10000) => {
+const fetchJsonWithTimeout = async (url, options = {}, timeoutMs = 20000) => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -234,8 +234,64 @@ const Emergencies = () => {
     }
   };
 
+  const loadDataWithDiagnostics = async () => {
+    setLoading(true);
+    try {
+      const requests = [
+        {
+          label: 'cursos',
+          promise: fetchJsonWithTimeout(`${API_BASE_URL}/api/students/curso`, { credentials: 'include' })
+        },
+        {
+          label: 'estudiantes',
+          promise: fetchJsonWithTimeout(`${API_BASE_URL}/api/students`, { credentials: 'include' })
+        },
+        {
+          label: 'historial',
+          promise: fetchJsonWithTimeout(`${API_BASE_URL}/api/emergencies/history`, { credentials: 'include' })
+        }
+      ];
+
+      const results = await Promise.allSettled(requests.map((request) => request.promise));
+      const [coursesResult, studentsResult, historyResult] = results;
+      const failedMainRequests = [0, 1].flatMap((index) => {
+        const result = results[index];
+        if (result.status === 'fulfilled') {
+          return [];
+        }
+
+        const detail = result.reason?.name === 'AbortError'
+          ? ' (tiempo de espera agotado)'
+          : result.reason?.message
+            ? ` (${result.reason.message})`
+            : '';
+
+        return [`${requests[index].label}${detail}`];
+      });
+
+      if (failedMainRequests.length > 0) {
+        throw new Error(`No se pudo cargar la información principal de emergencias: ${failedMainRequests.join(', ')}`);
+      }
+
+      setCourses(coursesResult.value);
+      setStudents(studentsResult.value);
+      setHistory(historyResult.status === 'fulfilled' ? historyResult.value : []);
+
+      if (historyResult.status !== 'fulfilled') {
+        setMessage({
+          type: 'warning',
+          text: 'La página cargó, pero el historial de emergencias no estuvo disponible. Si acabas de actualizar el código del backend, reinicia el servidor.'
+        });
+      }
+    } catch (error) {
+      setMessage({ type: 'danger', text: error.message || 'Error al cargar la página de emergencias' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadData();
+    loadDataWithDiagnostics();
   }, []);
 
   useEffect(() => {
@@ -352,7 +408,7 @@ const Emergencies = () => {
 
       setMessage({ type: 'success', text: data.message || 'Aviso enviado correctamente.' });
       setAttention(createDefaultAttention());
-      await loadData();
+      await loadDataWithDiagnostics();
     } catch (error) {
       setMessage({ type: 'danger', text: error.message || 'No se pudo enviar la emergencia.' });
     } finally {
