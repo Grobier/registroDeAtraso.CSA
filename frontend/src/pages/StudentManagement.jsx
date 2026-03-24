@@ -616,70 +616,84 @@ const StudentManagement = () => {
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <Form.Group className="mb-3">
-              <Form.Label>RUT</Form.Label>
-              <Form.Control
-                type="text"
-                name="rut"
-                value={studentForm.rut}
-                onChange={handleFormChange}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Nombres</Form.Label>
-              <Form.Control
-                type="text"
-                name="nombres"
-                value={studentForm.nombres}
-                onChange={handleFormChange}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Apellido Paterno</Form.Label>
-              <Form.Control
-                type="text"
-                name="apellidosPaterno"
-                value={studentForm.apellidosPaterno}
-                onChange={handleFormChange}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Apellido Materno</Form.Label>
-              <Form.Control
-                type="text"
-                name="apellidosMaterno"
-                value={studentForm.apellidosMaterno}
-                onChange={handleFormChange}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Curso</Form.Label>
-              <Form.Select
-                name="curso"
-                value={studentForm.curso}
-                onChange={handleFormChange}
-                required
-              >
-                <option value="">Seleccione un curso</option>
-                {courses.map((course, index) => (
-                  <option key={index} value={course}>{course}</option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Correo Apoderado</Form.Label>
-              <Form.Control
-                type="email"
-                name="correoApoderado"
-                value={studentForm.correoApoderado}
-                onChange={handleFormChange}
-                required
-              />
-            </Form.Group>
+            <Row className="g-3 student-form-grid">
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>RUT</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="rut"
+                    value={studentForm.rut}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Curso</Form.Label>
+                  <Form.Select
+                    name="curso"
+                    value={studentForm.curso}
+                    onChange={handleFormChange}
+                    required
+                  >
+                    <option value="">Seleccione un curso</option>
+                    {courses.map((course, index) => (
+                      <option key={index} value={course}>{course}</option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Nombres</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="nombres"
+                    value={studentForm.nombres}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Correo Apoderado</Form.Label>
+                  <Form.Control
+                    type="email"
+                    name="correoApoderado"
+                    value={studentForm.correoApoderado}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Apellido Paterno</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="apellidosPaterno"
+                    value={studentForm.apellidosPaterno}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Apellido Materno</Form.Label>
+                  <Form.Control
+                    type="text"
+                    name="apellidosMaterno"
+                    value={studentForm.apellidosMaterno}
+                    onChange={handleFormChange}
+                    required
+                  />
+                </Form.Group>
+              </Col>
+            </Row>
           </Form>
         </Modal.Body>
         <Modal.Footer>

@@ -341,6 +341,19 @@
   max-width: min(860px, calc(100vw - 2rem)) !important;
 }
 
+.student-form-grid {
+  align-items: start;
+}
+
+.student-form-grid .form-label {
+  margin-bottom: 0.55rem;
+}
+
+.student-form-grid .form-control,
+.student-form-grid .form-select {
+  min-height: 3.15rem;
+}
+
 .page-modal .modal-header,
 .page-modal .modal-footer {
   background: rgba(246, 250, 255, 0.94);
@@ -458,6 +471,9 @@
 }
 
 @media (max-width: 576px) {
+  .student-form-modal {
+    max-width: calc(100vw - 1rem) !important;
+  }
   .page-shell {
     padding-top: 0.8rem;
     padding-bottom: 1.1rem;
