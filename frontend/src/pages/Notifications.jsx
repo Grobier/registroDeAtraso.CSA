@@ -286,7 +286,7 @@ Equipo Directivo`
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [minTardinessFilter, setMinTardinessFilter] = useState('');
+  const [courseFilter, setCourseFilter] = useState('');
   const [punctualityFilter, setPunctualityFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [studentsPerPage] = useState(10);
@@ -498,7 +498,7 @@ Equipo Directivo`
     setSearchTerm('');
     setStartDate('');
     setEndDate('');
-    setMinTardinessFilter('');
+    setCourseFilter('');
     setPunctualityFilter('');
     setCurrentPage(1);
     loadStudentsWithTardiness();
@@ -1417,7 +1417,7 @@ Equipo Directivo`
     return new Date().getFullYear();
   }, []);
 
-  // Filtrar estudiantes por término de búsqueda y cantidad mínima de atrasos - OPTIMIZADO
+  // Filtrar estudiantes por término de búsqueda y curso - OPTIMIZADO
   const filteredStudents = useMemo(() => {
     if (!students || students.length === 0) return [];
     
@@ -1443,17 +1443,14 @@ Equipo Directivo`
         // Si no coincide la búsqueda, retornar false inmediatamente
         if (!searchMatch) return false;
         
-        // Filtro por cantidad mínima de atrasos
-        let tardinessMatch = true;
-        if (minTardinessFilter && minTardinessFilter.trim()) {
-          const minTardiness = parseInt(minTardinessFilter);
-          if (!isNaN(minTardiness)) {
-            tardinessMatch = student.totalAtrasos >= minTardiness;
-          }
+        // Filtro por curso
+        let courseMatch = true;
+        if (courseFilter && courseFilter.trim()) {
+          courseMatch = (student.curso || '').trim() === courseFilter.trim();
         }
-        
-        // Si no coincide el filtro de atrasos, retornar false inmediatamente
-        if (!tardinessMatch) return false;
+
+        // Si no coincide el filtro de curso, retornar false inmediatamente
+        if (!courseMatch) return false;
 
         // Filtro por calificación de puntualidad mensual
         let punctualityMatch = true;
@@ -1505,7 +1502,7 @@ Equipo Directivo`
       console.error('Error en filtrado de estudiantes:', error);
       return students; // En caso de error, retornar todos los estudiantes
     }
-  }, [students, debouncedSearchTerm, startDate, endDate, minTardinessFilter]);
+  }, [students, debouncedSearchTerm, startDate, endDate, courseFilter, punctualityFilter]);
 
   // Calcular estadísticas - OPTIMIZADO con useMemo
   const stats = useMemo(() => {
@@ -1561,7 +1558,7 @@ Equipo Directivo`
   // Resetear a primera página cuando cambien los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, startDate, endDate, minTardinessFilter, punctualityFilter]);
+  }, [searchTerm, startDate, endDate, courseFilter, punctualityFilter]);
 
   // Efecto para manejar la visibilidad del sidebar cuando hay modales abiertos
   useEffect(() => {
@@ -1793,7 +1790,7 @@ Equipo Directivo`
                           </>
                         )}
                         
-                        {(searchTerm || startDate || endDate || minTardinessFilter) && (
+                        {(searchTerm || startDate || endDate || courseFilter || punctualityFilter) && (
                           <Button 
                             variant="outline-secondary" 
                             size="sm"
@@ -1835,22 +1832,25 @@ Equipo Directivo`
                           <InputGroup.Text>
                             <FaFilter />
                           </InputGroup.Text>
-                          <Form.Control
-                            type="number"
-                            min="1"
-                            placeholder="Mín. atrasos"
-                            value={minTardinessFilter}
-                            onChange={(e) => setMinTardinessFilter(e.target.value)}
-                          />
-                          {minTardinessFilter && (
+                          <Form.Select
+                            size="sm"
+                            value={courseFilter}
+                            onChange={(e) => setCourseFilter(e.target.value)}
+                          >
+                            <option value="">Todos los cursos</option>
+                            {Array.from(new Set(students.map((student) => student.curso).filter(Boolean))).sort().map((course) => (
+                              <option key={course} value={course}>{course}</option>
+                            ))}
+                          </Form.Select>
+                          {courseFilter && (
                             <Button
                               variant="outline-secondary"
                               size="sm"
-                              onClick={() => setMinTardinessFilter('')}
+                              onClick={() => setCourseFilter('')}
                             >
                               ×
                             </Button>
-                            )}
+                          )}
                         </InputGroup>
                       </Col>
                       <Col md={2}>
@@ -1914,10 +1914,10 @@ Equipo Directivo`
                         </small>
                       </Col>
                     </Row>
-                    {(searchTerm || startDate || endDate || minTardinessFilter || punctualityFilter) && (
+                    {(searchTerm || startDate || endDate || courseFilter || punctualityFilter) && (
                       <div className="notifications-filter-summary mt-3">
                         {searchTerm && <span className="notifications-filter-chip">Búsqueda: "{searchTerm}"</span>}
-                        {minTardinessFilter && <span className="notifications-filter-chip">Mínimo: {minTardinessFilter}+ atrasos</span>}
+                        {courseFilter && <span className="notifications-filter-chip">Curso: {courseFilter}</span>}
                         {punctualityFilter && <span className="notifications-filter-chip">Calificación: {punctualityFilter}</span>}
                         {startDate && <span className="notifications-filter-chip">Desde: {new Date(startDate).toLocaleDateString('es-CL')}</span>}
                         {endDate && <span className="notifications-filter-chip">Hasta: {new Date(endDate).toLocaleDateString('es-CL')}</span>}
@@ -1970,9 +1970,7 @@ Equipo Directivo`
                         <th style={{ width: '86px' }}>Curso</th>
                         <th style={{ width: '240px' }}>Email Apoderado</th>
                         <th style={{ width: '110px' }}>
-                          {startDate && endDate ? 'Atrasos del Período' : 
-                            minTardinessFilter ? `Atrasos (≥${minTardinessFilter})` : 
-                            'Total Atrasos'}
+                          {startDate && endDate ? 'Atrasos del Período' : 'Total Atrasos'}
                         </th>
                         <th style={{ width: '112px' }}>Certificados</th>
                         <th style={{ width: '100px' }}>Último Atraso</th>
@@ -2068,9 +2066,9 @@ Equipo Directivo`
                         <strong>Búsqueda:</strong> "{searchTerm}"
                       </p>
                     )}
-                    {minTardinessFilter && (
+                    {courseFilter && (
                       <p className="mb-2">
-                        <strong>Filtro mínimo:</strong> {minTardinessFilter}+ atrasos
+                        <strong>Curso:</strong> {courseFilter}
                       </p>
                     )}
                   </div>
