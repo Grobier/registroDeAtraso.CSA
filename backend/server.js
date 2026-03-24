@@ -31,7 +31,7 @@ console.log('🔧 CORS Config - Origin permitido:', isProduction
 );
 
 // Servir archivos estáticos del frontend (SPA)
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Middleware JSON
 app.use(express.json());
@@ -167,7 +167,7 @@ app.use('/api/emergencies', emergenciesRoutes);
 // SPA: redirigir todo a index.html (excepto /api)
 app.get('*', (req, res) => {
   if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
   }
 });
 
