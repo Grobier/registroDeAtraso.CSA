@@ -1,11 +1,10 @@
-// config/emailConfig.js
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// Configuración unificada de Nodemailer con timeouts apropiados
+// Configuracion unificada de Nodemailer con timeouts apropiados.
 const createEmailTransporter = (options = {}) => {
   const isProduction = process.env.NODE_ENV === 'production';
-  
+
   return nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -14,75 +13,111 @@ const createEmailTransporter = (options = {}) => {
     },
     tls: {
       rejectUnauthorized: false,
-      minVersion: "TLSv1.2"
+      minVersion: 'TLSv1.2'
     },
-    // Configuración de timeouts para evitar ETIMEDOUT
-    connectionTimeout: 60000, // 60 segundos para establecer conexión
-    greetingTimeout: 30000,   // 30 segundos para saludo SMTP
-    socketTimeout: 60000,     // 60 segundos para operaciones de socket
-    // Configuración de pool para reutilizar conexiones
+    connectionTimeout: options.connectionTimeout || 60000,
+    greetingTimeout: options.greetingTimeout || 30000,
+    socketTimeout: options.socketTimeout || 60000,
     pool: true,
     maxConnections: 5,
     maxMessages: 100,
-    // Debug solo en desarrollo
     debug: !isProduction,
     logger: !isProduction
   });
 };
 
-// Función para enviar correo con manejo de errores mejorado
+// Funcion para enviar correo con manejo de errores mejorado.
 const sendEmail = async (mailOptions, timeout = 30000) => {
   const transporter = createEmailTransporter();
-  
+
   return new Promise((resolve, reject) => {
-    // Timeout personalizado para la operación completa
     const timeoutId = setTimeout(() => {
-      transporter.close(); // Cerrar conexión en caso de timeout
+      transporter.close();
       reject(new Error('Email sending timeout after 30 seconds'));
     }, timeout);
 
     transporter.sendMail(mailOptions, (error, info) => {
       clearTimeout(timeoutId);
-      
+
       if (error) {
-        // Cerrar conexión en caso de error
         transporter.close();
-        
-        // Log detallado del error
-        console.error("Error detallado al enviar correo:", {
+
+        console.error('Error detallado al enviar correo:', {
           code: error.code,
           command: error.command,
           response: error.response,
           message: error.message
         });
-        
-        // Rechazar con error más específico
-        const errorMessage = error.code === 'ETIMEDOUT' 
-          ? 'Timeout de conexión SMTP - verificar configuración de red'
+
+        const errorMessage = error.code === 'ETIMEDOUT'
+          ? 'Timeout de conexion SMTP - verificar configuracion de red'
           : error.message || 'Error desconocido al enviar correo';
-          
+
         reject(new Error(errorMessage));
-      } else {
-        console.log("Correo enviado exitosamente:", info.messageId);
-        resolve(info);
+        return;
       }
+
+      console.log('Correo enviado exitosamente:', info.messageId);
+      resolve(info);
     });
   });
 };
 
-// Función para verificar la conexión SMTP
-const verifyEmailConnection = async () => {
-  const transporter = createEmailTransporter();
-  
-  return new Promise((resolve, reject) => {
+// Verificacion inicial no bloqueante para evitar ruido cuando Render despierta la instancia.
+const verifyEmailConnection = async (options = {}) => {
+  const {
+    timeout = 12000,
+    logErrors = false
+  } = options;
+
+  const transporter = createEmailTransporter({
+    connectionTimeout: timeout,
+    greetingTimeout: Math.min(timeout, 10000),
+    socketTimeout: timeout
+  });
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      transporter.close();
+      resolve(result);
+    };
+
+    const timeoutId = setTimeout(() => {
+      finish({
+        ok: false,
+        code: 'VERIFY_TIMEOUT',
+        message: 'La verificacion SMTP excedio el tiempo de espera.'
+      });
+    }, timeout);
+
     transporter.verify((error, success) => {
       if (error) {
-        console.error("Error en verificación SMTP:", error);
-        reject(error);
-      } else {
-        console.log("SMTP Server está listo:", success);
-        resolve(success);
+        if (logErrors) {
+          console.warn('Advertencia en verificacion SMTP:', {
+            code: error.code,
+            command: error.command,
+            message: error.message
+          });
+        }
+
+        finish({
+          ok: false,
+          code: error.code || 'VERIFY_ERROR',
+          message: error.message || 'No fue posible verificar SMTP.'
+        });
+        return;
       }
+
+      finish({
+        ok: Boolean(success),
+        code: 'SMTP_READY',
+        message: 'Servidor SMTP disponible.'
+      });
     });
   });
 };
