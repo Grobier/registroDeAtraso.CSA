@@ -26,14 +26,17 @@ const createEmailTransporter = (options = {}) => {
   });
 };
 
-// Funcion para enviar correo con manejo de errores mejorado.
-const sendEmail = async (mailOptions, timeout = 30000) => {
-  const transporter = createEmailTransporter();
+const sendMailAttempt = (mailOptions, timeout) => {
+  const transporter = createEmailTransporter({
+    connectionTimeout: Math.max(timeout, 60000),
+    greetingTimeout: Math.min(timeout, 30000),
+    socketTimeout: Math.max(timeout, 60000)
+  });
 
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       transporter.close();
-      reject(new Error('Email sending timeout after 30 seconds'));
+      reject(new Error(`Email sending timeout after ${Math.round(timeout / 1000)} seconds`));
     }, timeout);
 
     transporter.sendMail(mailOptions, (error, info) => {
@@ -50,17 +53,35 @@ const sendEmail = async (mailOptions, timeout = 30000) => {
         });
 
         const errorMessage = error.code === 'ETIMEDOUT'
-          ? 'Timeout de conexion SMTP - verificar configuracion de red'
+          ? `Timeout de conexión SMTP tras ${Math.round(timeout / 1000)} segundos`
           : error.message || 'Error desconocido al enviar correo';
 
-        reject(new Error(errorMessage));
+        const enhancedError = new Error(errorMessage);
+        enhancedError.code = error.code;
+        enhancedError.command = error.command;
+        reject(enhancedError);
         return;
       }
 
+      transporter.close();
       console.log('Correo enviado exitosamente:', info.messageId);
       resolve(info);
     });
   });
+};
+
+// Funcion para enviar correo con manejo de errores mejorado.
+const sendEmail = async (mailOptions, timeout = 60000) => {
+  try {
+    return await sendMailAttempt(mailOptions, timeout);
+  } catch (error) {
+    if (error.code !== 'ETIMEDOUT') {
+      throw error;
+    }
+
+    console.warn('Primer intento SMTP agotó el tiempo de espera. Reintentando una vez...');
+    return sendMailAttempt(mailOptions, timeout);
+  }
 };
 
 // Verificacion inicial no bloqueante para evitar ruido cuando Render despierta la instancia.

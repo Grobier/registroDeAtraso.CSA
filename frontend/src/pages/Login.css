@@ -106,36 +106,47 @@ body.dark-mode .login-title {
 .login-form .form-control {
   border-radius: 18px;
   padding: 0.8rem 1rem;
-  border: 1px solid rgba(142, 180, 255, 0.18);
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(196, 214, 245, 0.92);
+  background: #f8fbff;
   font-size: 0.95rem;
-  color: #ffffff;
-  -webkit-text-fill-color: #ffffff;
-  caret-color: #ffffff;
+  color: #102746;
+  -webkit-text-fill-color: #102746;
+  caret-color: #102746;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 .login-form .form-control:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--primary-muted);
-  background: rgba(255, 255, 255, 0.1);
+  background: #ffffff;
   outline: none;
 }
 
 body.dark-mode .login-form .form-control {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(142, 180, 255, 0.16);
-  color: #ffffff;
-  -webkit-text-fill-color: #ffffff;
+  background: #f8fbff;
+  border-color: rgba(196, 214, 245, 0.92);
+  color: #102746;
+  -webkit-text-fill-color: #102746;
 }
 
 .login-form .form-control::placeholder {
-  color: rgba(230, 238, 252, 0.62);
+  color: #6881a8;
 }
 
 body.dark-mode .login-form .form-control:focus {
-  background: rgba(255, 255, 255, 0.08);
+  background: #ffffff;
   border-color: var(--primary);
+}
+
+.login-form input:-webkit-autofill,
+.login-form input:-webkit-autofill:hover,
+.login-form input:-webkit-autofill:focus,
+.login-form textarea:-webkit-autofill,
+.login-form select:-webkit-autofill {
+  -webkit-text-fill-color: #102746;
+  -webkit-box-shadow: 0 0 0 1000px #f8fbff inset;
+  box-shadow: 0 0 0 1000px #f8fbff inset;
+  caret-color: #102746;
 }
 
 .login-button {
