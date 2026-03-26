@@ -1385,6 +1385,8 @@ const Dashboard = () => {
         onHide={() => setShowTodayStatsModal(false)}
         size="xl"
         centered
+        dialogClassName="today-stats-modal"
+        contentClassName="today-stats-modal__content"
       >
         <Modal.Header closeButton>
           <Modal.Title>
@@ -1420,7 +1422,7 @@ const Dashboard = () => {
                 {/* Resumen general */}
                 <Row className="mb-4">
                   <Col md={3}>
-                    <Card className="text-center border-0 shadow-sm h-100">
+                    <Card className="text-center border-0 shadow-sm h-100 today-stats-summary-card">
                       <Card.Body className="py-3">
                         <h3 className="text-primary mb-1" style={{ fontSize: '2rem' }}>{stats.total}</h3>
                         <p className="text-muted small mb-0">Total Atrasos</p>
@@ -1428,7 +1430,7 @@ const Dashboard = () => {
                     </Card>
                   </Col>
                   <Col md={3}>
-                    <Card className="text-center border-0 shadow-sm h-100">
+                    <Card className="text-center border-0 shadow-sm h-100 today-stats-summary-card">
                       <Card.Body className="py-3">
                         <h3 className="text-success mb-1" style={{ fontSize: '2rem' }}>{stats.withCertificate}</h3>
                         <p className="text-muted small mb-0">Con Certificado</p>
@@ -1436,7 +1438,7 @@ const Dashboard = () => {
                     </Card>
                   </Col>
                   <Col md={3}>
-                    <Card className="text-center border-0 shadow-sm h-100">
+                    <Card className="text-center border-0 shadow-sm h-100 today-stats-summary-card">
                       <Card.Body className="py-3">
                         <h3 className="text-danger mb-1" style={{ fontSize: '2rem' }}>{stats.withoutCertificate}</h3>
                         <p className="text-muted small mb-0">Sin Certificado</p>
@@ -1444,7 +1446,7 @@ const Dashboard = () => {
                     </Card>
                   </Col>
                   <Col md={3}>
-                    <Card className="text-center border-0 shadow-sm h-100">
+                    <Card className="text-center border-0 shadow-sm h-100 today-stats-summary-card">
                       <Card.Body className="py-3">
                         <h3 className="text-warning mb-1" style={{ fontSize: '2rem' }}>{stats.latePresent}</h3>
                         <p className="text-muted small mb-0">Atrasado-Presente</p>
@@ -1456,14 +1458,14 @@ const Dashboard = () => {
                 {/* Distribución por curso */}
                 <Row className="mb-3">
                   <Col>
-                    <Card className="border-0 shadow-sm">
-                      <Card.Header className="bg-light border-0 py-2">
+                    <Card className="border-0 shadow-sm today-stats-section-card">
+                      <Card.Header className="bg-light border-0 py-2 today-stats-section-card__header">
                         <h6 className="mb-0 text-muted small">📚 Distribución por Curso</h6>
                       </Card.Header>
                       <Card.Body className="py-2">
                         <div className="d-flex flex-wrap gap-2">
                           {Object.entries(stats.byCourse).map(([curso, count]) => (
-                            <div key={curso} className="d-flex align-items-center" style={{ 
+                            <div key={curso} className="d-flex align-items-center today-stats-chip" style={{ 
                               background: '#f8f9fa', 
                               borderRadius: '0.25rem',
                               border: '1px solid #e9ecef',
@@ -1485,8 +1487,8 @@ const Dashboard = () => {
                 {/* Distribución por hora */}
                 <Row className="mb-3">
                   <Col>
-                    <Card className="border-0 shadow-sm">
-                      <Card.Header className="bg-light border-0 py-2">
+                    <Card className="border-0 shadow-sm today-stats-section-card">
+                      <Card.Header className="bg-light border-0 py-2 today-stats-section-card__header">
                         <h6 className="mb-0 text-muted small">🕐 Distribución por Hora</h6>
                       </Card.Header>
                       <Card.Body className="py-2">
@@ -1494,7 +1496,7 @@ const Dashboard = () => {
                           {Object.entries(stats.byHour)
                             .sort(([a], [b]) => a.localeCompare(b))
                             .map(([hour, count]) => (
-                            <div key={hour} className="d-flex align-items-center" style={{ 
+                            <div key={hour} className="d-flex align-items-center today-stats-chip" style={{ 
                               background: '#f8f9fa', 
                               borderRadius: '0.25rem',
                               border: '1px solid #e9ecef',
@@ -1516,13 +1518,13 @@ const Dashboard = () => {
                 {/* Lista detallada */}
                 <Row>
                   <Col>
-                    <Card className="border-0 shadow-sm">
-                      <Card.Header className="bg-light border-0 py-3">
+                    <Card className="border-0 shadow-sm today-stats-section-card">
+                      <Card.Header className="bg-light border-0 py-3 today-stats-section-card__header">
                         <h6 className="mb-0 text-muted">📋 Lista Detallada de Atrasos</h6>
                       </Card.Header>
-                      <Card.Body className="p-0">
+                      <Card.Body className="p-0 today-stats-table-shell">
                         <div className="table-responsive">
-                          <Table className="mb-0" size="sm">
+                          <Table className="mb-0 today-stats-table" size="sm">
                             <thead className="bg-light">
                               <tr>
                                 <th className="border-0 py-2 px-3 text-muted small fw-normal">#</th>

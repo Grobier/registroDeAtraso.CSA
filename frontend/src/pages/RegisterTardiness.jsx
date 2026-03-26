@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Form, Button, Alert, Card, Row, Col, Badge } from 'react-bootstrap';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { FaPlusCircle, FaWifi, FaExclamationTriangle } from 'react-icons/fa';
+import { FaPlusCircle, FaWifi, FaExclamationTriangle, FaBookOpen, FaUserGraduate, FaClipboardList } from 'react-icons/fa';
 import useOnlineStatus from '../hooks/useOnlineStatus';
 import ManualRegistrationModal from '../components/ManualRegistrationModal';
 import './RegisterTardiness.css';

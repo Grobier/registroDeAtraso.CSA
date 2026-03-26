@@ -591,6 +591,73 @@ body.dark-mode .modal-content {
   border-radius: 28px;
 }
 
+.today-stats-modal {
+  max-width: min(1120px, calc(100vw - 2rem)) !important;
+}
+
+.today-stats-modal__content {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 251, 255, 0.96));
+}
+
+.today-stats-summary-card {
+  border: 1px solid rgba(204, 218, 240, 0.78) !important;
+  border-radius: 24px !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(242, 247, 255, 0.94)) !important;
+  box-shadow: 0 16px 34px rgba(37, 71, 124, 0.1) !important;
+}
+
+.today-stats-summary-card .card-body {
+  background: transparent;
+}
+
+.today-stats-section-card {
+  border: 1px solid rgba(204, 218, 240, 0.76) !important;
+  border-radius: 24px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: 0 14px 30px rgba(37, 71, 124, 0.08) !important;
+  overflow: hidden;
+}
+
+.today-stats-section-card__header {
+  background: linear-gradient(180deg, rgba(246, 250, 255, 0.96), rgba(238, 245, 255, 0.94)) !important;
+  border-bottom: 1px solid rgba(208, 221, 243, 0.74) !important;
+}
+
+.today-stats-chip {
+  background: #f8fbff !important;
+  border-radius: 12px !important;
+  border: 1px solid rgba(212, 224, 243, 0.88) !important;
+  padding: 0.35rem 0.6rem !important;
+  font-size: 0.78rem !important;
+}
+
+.today-stats-table-shell {
+  background: #ffffff;
+}
+
+.today-stats-table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(33, 79, 143, 0.03);
+  --bs-table-hover-bg: rgba(62, 112, 195, 0.06);
+  color: #1f3658;
+}
+
+.today-stats-table thead th {
+  background: rgba(242, 247, 255, 0.96) !important;
+  color: #5c7597 !important;
+  border-color: rgba(212, 223, 241, 0.84) !important;
+  font-weight: 700 !important;
+}
+
+.today-stats-table td,
+.today-stats-table th {
+  border-color: rgba(221, 229, 243, 0.82) !important;
+}
+
+.today-stats-table tbody tr:hover > * {
+  background: rgba(247, 250, 255, 0.96) !important;
+}
+
 .nav-link-custom {
   color: var(--gray-600);
   font-weight: 600;

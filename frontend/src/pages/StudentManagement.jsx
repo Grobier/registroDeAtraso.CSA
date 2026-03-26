@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Card, Table, Form, Button, Modal, Spinner, Alert, InputGroup } from 'react-bootstrap';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import Swal from 'sweetalert2';
 import { FaEdit, FaTrash, FaFileExcel, FaUsers, FaGraduationCap, FaPlus, FaRedo, FaSearch, FaFilter, FaTimes } from 'react-icons/fa';
 import '../styles/PageTheme.css';
 
@@ -154,22 +155,67 @@ const StudentManagement = () => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
+  const validateStudentForm = () => {
+    const requiredFields = [
+      { key: 'rut', label: 'RUT' },
+      { key: 'curso', label: 'Curso' },
+      { key: 'nombres', label: 'Nombres' },
+      { key: 'apellidosPaterno', label: 'Apellido Paterno' },
+      { key: 'apellidosMaterno', label: 'Apellido Materno' },
+      { key: 'correoApoderado', label: 'Correo Apoderado' }
+    ];
+
+    const missingFields = requiredFields
+      .filter(({ key }) => !String(studentForm[key] || '').trim())
+      .map(({ label }) => label);
+
+    if (missingFields.length > 0) {
+      return `Completa los campos obligatorios: ${missingFields.join(', ')}`;
+    }
+
+    if (!isValidEmail(String(studentForm.correoApoderado || '').trim())) {
+      return 'Por favor ingrese un correo electrÃ³nico vÃ¡lido';
+    }
+
+    return '';
+  };
+
   // Guardar estudiante
   const handleSaveStudent = async () => {
+    const validationError = validateStudentForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     if (!isValidEmail(studentForm.correoApoderado)) {
       setError('Por favor ingrese un correo electrónico válido');
       return;
     }
 
     try {
+      const payload = {
+        rut: String(studentForm.rut || '').trim(),
+        nombres: String(studentForm.nombres || '').trim(),
+        apellidosPaterno: String(studentForm.apellidosPaterno || '').trim(),
+        apellidosMaterno: String(studentForm.apellidosMaterno || '').trim(),
+        curso: String(studentForm.curso || '').trim(),
+        correoApoderado: String(studentForm.correoApoderado || '').trim()
+      };
+
       if (currentStudent) {
         // Actualizar estudiante existente
-        await axios.put(`${API_BASE_URL}/api/students/${currentStudent._id}`, studentForm, { withCredentials: true });
+        await axios.put(`${API_BASE_URL}/api/students/${currentStudent._id}`, payload, { withCredentials: true });
         setSuccess('Estudiante actualizado exitosamente');
       } else {
         // Crear nuevo estudiante
-        await axios.post(`${API_BASE_URL}/api/students`, studentForm, { withCredentials: true });
+        await axios.post(`${API_BASE_URL}/api/students`, payload, { withCredentials: true });
         setSuccess('Estudiante creado exitosamente');
+        Swal.fire({
+          icon: 'success',
+          title: 'Estudiante creado',
+          text: 'El estudiante fue creado exitosamente',
+          confirmButtonColor: '#20498f'
+        });
       }
       
       fetchStudents();
@@ -184,7 +230,7 @@ const StudentManagement = () => {
         correoApoderado: ''
       });
     } catch (error) {
-      setError('Error al guardar el estudiante');
+      setError(error.response?.data?.message || 'Error al guardar el estudiante');
     }
   };
 
