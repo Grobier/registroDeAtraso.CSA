@@ -37,6 +37,7 @@ router.post('/send', ensureAuthenticated, async (req, res) => {
       from: process.env.EMAIL_USER || 'tu-email@gmail.com',
       to: student.correoApoderado,
       subject,
+      text: message,
       html: message.replace(/\n/g, '<br>')
     };
 
