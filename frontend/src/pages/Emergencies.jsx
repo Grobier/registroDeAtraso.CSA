@@ -195,7 +195,6 @@ const Emergencies = () => {
       studentName,
       course: selectedStudent?.curso || selectedCourse || 'Curso',
       date: now.toLocaleDateString('es-CL'),
-      time: now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
       accidentLine,
       painLine,
       followUpLine,
@@ -205,7 +204,7 @@ const Emergencies = () => {
   }, [attention, selectedCourse, selectedStudent]);
 
   const previewSubject = useMemo(
-    () => `Aviso de emergencia enfermería - ${previewValues.studentName}`,
+    () => `Aviso de emergencia - ${previewValues.studentName}`,
     [previewValues.studentName]
   );
 
@@ -213,7 +212,7 @@ const Emergencies = () => {
     const lines = [
       'Estimado apoderado:',
       '',
-      `Informamos que el estudiante ${previewValues.studentName}, del curso ${previewValues.course}, fue atendido en enfermería hoy ${previewValues.date} a las ${previewValues.time}.`
+      `Informamos que el estudiante ${previewValues.studentName}, del curso ${previewValues.course}, fue atendido hoy ${previewValues.date}.`
     ];
 
     if (previewValues.accidentLine) {
@@ -236,7 +235,7 @@ const Emergencies = () => {
       'Este correo deja constancia del aviso realizado por el establecimiento.',
       '',
       'Atentamente,',
-      'Enfermería - Colegio Saint Arieli'
+      'Colegio Saint Arieli'
     );
 
     return lines.join('\n');
