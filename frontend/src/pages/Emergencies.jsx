@@ -129,6 +129,7 @@ const Emergencies = () => {
   const [selectedStudentRut, setSelectedStudentRut] = useState('');
   const [attention, setAttention] = useState(createDefaultAttention);
   const [history, setHistory] = useState([]);
+  const [historyQuery, setHistoryQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -145,6 +146,20 @@ const Emergencies = () => {
     }
     return students.filter((student) => student.curso === selectedCourse);
   }, [students, selectedCourse]);
+
+  const filteredHistory = useMemo(() => {
+    const query = historyQuery.trim().toLowerCase();
+    if (!query) {
+      return history;
+    }
+
+    return history.filter((item) => {
+      const studentName = (item.studentName || '').toLowerCase();
+      const studentRut = (item.studentRut || '').toLowerCase();
+      const course = (item.course || '').toLowerCase();
+      return studentName.includes(query) || studentRut.includes(query) || course.includes(query);
+    });
+  }, [history, historyQuery]);
 
   const selectedPainLevel = useMemo(() => {
     return PAIN_LEVELS.reduce((closest, level) => {
@@ -696,9 +711,22 @@ const Emergencies = () => {
           <Card className="section-card" ref={historySectionRef}>
             <Card.Header className="d-flex justify-content-between align-items-center">
               <span>Historial de emergencias enviadas</span>
-              <Badge bg="danger">{history.length} registros</Badge>
+              <Badge bg="danger">{filteredHistory.length} registros</Badge>
             </Card.Header>
             <Card.Body>
+              <Row className="g-3 mb-3">
+                <Col md={6} lg={5}>
+                  <Form.Group>
+                    <Form.Label>Buscar estudiante en historial</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={historyQuery}
+                      onChange={(e) => setHistoryQuery(e.target.value)}
+                      placeholder="Busca por nombre, RUT o curso"
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
               <div className="table-responsive table-shell">
                 <Table className="emergency-history-table">
                   <thead>
@@ -714,14 +742,16 @@ const Emergencies = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {history.length === 0 ? (
+                    {filteredHistory.length === 0 ? (
                       <tr>
                         <td colSpan="8" className="text-center text-muted py-4">
-                          Aún no hay avisos de emergencia registrados.
+                          {historyQuery.trim()
+                            ? 'No hay resultados para esa búsqueda en el historial.'
+                            : 'Aún no hay avisos de emergencia registrados.'}
                         </td>
                       </tr>
                     ) : (
-                      history.map((item) => (
+                      filteredHistory.map((item) => (
                         <tr key={item._id}>
                           <td>{new Date(item.fechaEnvio).toLocaleString('es-CL')}</td>
                           <td>
@@ -733,13 +763,15 @@ const Emergencies = () => {
                           <td>{item.guardianEmail}</td>
                           <td>{item.sentBy}</td>
                           <td>
-                            <Badge bg={item.status === 'enviado' ? 'success' : 'danger'}>
-                              {item.status === 'enviado' ? 'Enviado' : 'Error'}
+                            <Badge bg={item.status === 'enviado' ? 'success' : item.status === 'procesando' ? 'warning' : 'danger'}>
+                              {item.status === 'enviado' ? 'Enviado' : item.status === 'procesando' ? 'Procesando' : 'Error'}
                             </Badge>
                           </td>
                           <td>
                             {item.status === 'enviado' ? (
                               <span className="text-muted">Correo enviado correctamente.</span>
+                            ) : item.status === 'procesando' ? (
+                              <span className="text-muted">El correo sigue en proceso de envío.</span>
                             ) : (
                               <span className="text-danger fw-semibold">
                                 {item.error || 'No se pudo determinar el motivo del fallo.'}

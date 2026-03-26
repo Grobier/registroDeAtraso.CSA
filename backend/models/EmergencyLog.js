@@ -13,7 +13,7 @@ const emergencyLogSchema = new mongoose.Schema({
   atencion: { type: mongoose.Schema.Types.Mixed, default: {} },
   observations: { type: String, default: '' },
   sentBy: { type: String, required: true },
-  status: { type: String, enum: ['enviado', 'error'], default: 'enviado' },
+  status: { type: String, enum: ['procesando', 'enviado', 'error'], default: 'procesando' },
   error: { type: String, default: '' }
 });
 

@@ -40,17 +40,7 @@ router.post('/send', ensureAuthenticated, async (req, res) => {
       html: message.replace(/\n/g, '<br>')
     };
 
-    let status = 'enviado';
-    let errorMessage = '';
-
-    try {
-      await sendEmail(mailOptions);
-    } catch (error) {
-      status = 'error';
-      errorMessage = error.message || 'Error desconocido al enviar correo';
-    }
-
-    await EmergencyLog.create({
+    const emergencyLog = await EmergencyLog.create({
       studentRut: student.rut,
       studentName,
       course: student.curso || 'Sin curso',
@@ -62,27 +52,49 @@ router.post('/send', ensureAuthenticated, async (req, res) => {
       atencion,
       observations: observations.trim(),
       sentBy: req.user.username || req.user.email,
-      status,
-      error: errorMessage
+      status: 'procesando',
+      error: ''
     });
 
     await ActivityLog.create({
       user: req.user.username || req.user.email,
       action: 'Enviar emergencia',
-      details: `${templateLabel} a ${studentName} (${student.rut}) - estado: ${status}`
+      details: `${templateLabel} a ${studentName} (${student.rut}) - estado: procesando`
     });
 
-    if (status === 'error') {
-      return res.status(500).json({
-        message: 'La emergencia fue registrada, pero el correo no pudo enviarse',
-        status,
-        error: errorMessage
-      });
-    }
+    setImmediate(async () => {
+      try {
+        await sendEmail(mailOptions, 120000);
 
-    res.json({
-      message: 'Aviso de emergencia enviado y registrado correctamente',
-      status
+        await EmergencyLog.findByIdAndUpdate(emergencyLog._id, {
+          status: 'enviado',
+          error: ''
+        });
+
+        await ActivityLog.create({
+          user: req.user.username || req.user.email,
+          action: 'Correo de emergencia enviado',
+          details: `${templateLabel} a ${studentName} (${student.rut}) - estado: enviado`
+        });
+      } catch (error) {
+        const errorMessage = error.message || 'Error desconocido al enviar correo';
+
+        await EmergencyLog.findByIdAndUpdate(emergencyLog._id, {
+          status: 'error',
+          error: errorMessage
+        });
+
+        await ActivityLog.create({
+          user: req.user.username || req.user.email,
+          action: 'Correo de emergencia con error',
+          details: `${templateLabel} a ${studentName} (${student.rut}) - estado: error - ${errorMessage}`
+        });
+      }
+    });
+
+    res.status(202).json({
+      message: 'Aviso de emergencia registrado. El correo se está enviando y el estado se actualizará en el historial.',
+      status: 'procesando'
     });
   } catch (error) {
     console.error('Error al enviar emergencia:', error);
