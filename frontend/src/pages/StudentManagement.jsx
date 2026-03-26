@@ -7,6 +7,16 @@ import { FaEdit, FaTrash, FaFileExcel, FaUsers, FaGraduationCap, FaPlus, FaRedo,
 import '../styles/PageTheme.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
+const console = import.meta.env.PROD
+  ? {
+      log: () => {},
+      error: () => {},
+      warn: () => {},
+      groupCollapsed: () => {},
+      groupEnd: () => {},
+      table: () => {}
+    }
+  : globalThis.console;
 
 const StudentManagement = () => {
   const [students, setStudents] = useState([]);

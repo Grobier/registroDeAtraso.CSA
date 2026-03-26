@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Badge, Button, Card, Col, Container, Form, Row, Spinner, Table } from 'react-bootstrap';
+import Swal from 'sweetalert2';
 import '../styles/PageTheme.css';
 import './Emergencies.css';
 
@@ -26,6 +27,7 @@ const ACCIDENT_CAUSES = [
   { value: 'colision-accidental', label: 'Colisión accidental' },
   { value: 'caida', label: 'Caída' },
   { value: 'golpe', label: 'Golpe' },
+  { value: 'herida-cortante', label: 'Herida cortante' },
   { value: 'discusion-golpes', label: 'Discusión a golpes con compañero' },
   { value: 'trayecto', label: 'Trayecto' }
 ];
@@ -46,6 +48,15 @@ const PAIN_ZONE_LABELS = {
   'Pie Izquierdo': 'el pie izquierdo',
   'Pie Derecho': 'el pie derecho'
 };
+
+const PAIN_LEVELS = [
+  { value: 1, label: 'Sin dolor', face: '😀', color: '#159947' },
+  { value: 2, label: 'Dolor leve', face: '🙂', color: '#67c21f' },
+  { value: 4, label: 'Dolor moderado', face: '😐', color: '#f6c739' },
+  { value: 6, label: 'Dolor fuerte', face: '😟', color: '#f18a00' },
+  { value: 8, label: 'Dolor muy fuerte', face: '😢', color: '#dc5b17' },
+  { value: 10, label: 'Dolor máximo', face: '😭', color: '#b8191f' }
+];
 
 const createDefaultAttention = () => ({
   es_accidente: false,
@@ -121,6 +132,7 @@ const Emergencies = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const historySectionRef = useRef(null);
 
   const selectedStudent = useMemo(
     () => students.find((student) => student.rut === selectedStudentRut) || null,
@@ -133,6 +145,14 @@ const Emergencies = () => {
     }
     return students.filter((student) => student.curso === selectedCourse);
   }, [students, selectedCourse]);
+
+  const selectedPainLevel = useMemo(() => {
+    return PAIN_LEVELS.reduce((closest, level) => {
+      return Math.abs(level.value - attention.detalle_dolor.intensidad) < Math.abs(closest.value - attention.detalle_dolor.intensidad)
+        ? level
+        : closest;
+    }, PAIN_LEVELS[0]);
+  }, [attention.detalle_dolor.intensidad]);
 
   const previewValues = useMemo(() => {
     const now = new Date();
@@ -152,6 +172,10 @@ const Emergencies = () => {
       ? `Presenta un cuadro de dolor localizado en: ${formatNaturalList(attention.detalle_dolor.zonas.map((zone) => PAIN_ZONE_LABELS[zone] || zone.toLowerCase()))}, con una intensidad de ${attention.detalle_dolor.intensidad}/10.`
       : '';
 
+    const followUpLine = attention.es_accidente
+      ? 'Al tratarse de un accidente, usted como apoderado/a tiene el deber de retirar al estudiante para trasladarlo a un servicio asistencial, según lo conversado telefónicamente.'
+      : 'Según lo conversado telefónicamente, la decisión de retirar al estudiante para trasladarlo a un servicio asistencial queda a su criterio.';
+
     return {
       studentName,
       course: selectedStudent?.curso || selectedCourse || 'Curso',
@@ -159,6 +183,7 @@ const Emergencies = () => {
       time: now.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' }),
       accidentLine,
       painLine,
+      followUpLine,
       insuranceLine: 'El estudiante cuenta con su seguro correspondiente.',
       observations: attention.observaciones_libres.trim() || 'Sin observaciones adicionales.'
     };
@@ -191,7 +216,7 @@ const Emergencies = () => {
       'Observaciones:',
       previewValues.observations,
       '',
-      'Según lo conversado telefónicamente, la decisión de retirar al estudiante para trasladarlo a un servicio asistencial queda a su criterio.',
+      previewValues.followUpLine,
       '',
       'Este correo deja constancia del aviso realizado por el establecimiento.',
       '',
@@ -307,7 +332,9 @@ const Emergencies = () => {
         return {
           ...current,
           es_dolor: nextEnabled,
-          detalle_dolor: nextEnabled ? current.detalle_dolor : { zonas: [], intensidad: 5 }
+          es_accidente: false,
+          detalle_dolor: nextEnabled ? current.detalle_dolor : { zonas: [], intensidad: 5 },
+          detalle_accidente: { tipo: '', trayecto_info: '' }
         };
       }
 
@@ -315,9 +342,11 @@ const Emergencies = () => {
       return {
         ...current,
         es_accidente: nextEnabled,
+        es_dolor: false,
         detalle_accidente: nextEnabled
           ? current.detalle_accidente
-          : { tipo: '', trayecto_info: '' }
+          : { tipo: '', trayecto_info: '' },
+        detalle_dolor: { zonas: [], intensidad: 5 }
       };
     });
   };
@@ -351,7 +380,7 @@ const Emergencies = () => {
     }
 
     if (!attention.es_accidente && !attention.es_dolor) {
-      return 'Debes activar Dolor, Accidente o ambos.';
+      return 'Debes activar Dolor o Accidente.';
     }
 
     if (attention.es_dolor && attention.detalle_dolor.zonas.length === 0) {
@@ -375,6 +404,12 @@ const Emergencies = () => {
     const validationMessage = validateAttention();
     if (validationMessage) {
       setMessage({ type: 'warning', text: validationMessage });
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Faltan datos',
+        text: validationMessage,
+        confirmButtonColor: '#20498f'
+      });
       return;
     }
 
@@ -389,11 +424,7 @@ const Emergencies = () => {
         body: JSON.stringify({
           studentRut: selectedStudent.rut,
           templateKey: 'atencion-enfermeria',
-          templateLabel: attention.es_accidente && attention.es_dolor
-            ? 'Accidente y dolor'
-            : attention.es_accidente
-              ? 'Accidente'
-              : 'Dolor',
+          templateLabel: attention.es_accidente ? 'Accidente' : 'Dolor',
           subject: previewSubject,
           message: previewBody,
           observations: attention.observaciones_libres,
@@ -403,14 +434,30 @@ const Emergencies = () => {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'No se pudo enviar el aviso de emergencia');
+        const detailedMessage = data.error
+          ? `${data.message || 'No se pudo enviar el aviso de emergencia'}: ${data.error}`
+          : (data.message || 'No se pudo enviar el aviso de emergencia');
+        throw new Error(detailedMessage);
       }
 
       setMessage({ type: 'success', text: data.message || 'Aviso enviado correctamente.' });
       setAttention(createDefaultAttention());
       await loadDataWithDiagnostics();
+      await Swal.fire({
+        icon: 'success',
+        title: 'Aviso enviado',
+        text: data.message || 'Aviso enviado correctamente.',
+        confirmButtonColor: '#20498f'
+      });
+      historySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (error) {
       setMessage({ type: 'danger', text: error.message || 'No se pudo enviar la emergencia.' });
+      await Swal.fire({
+        icon: 'error',
+        title: 'No se pudo enviar el correo',
+        text: error.message || 'No se pudo enviar la emergencia.',
+        confirmButtonColor: '#20498f'
+      });
     } finally {
       setSending(false);
     }
@@ -507,23 +554,57 @@ const Emergencies = () => {
                       </div>
 
                       <Form.Group className="mt-4">
-                        <Form.Label>Intensidad del dolor: {attention.detalle_dolor.intensidad}/10</Form.Label>
-                        <Form.Range
-                          min={1}
-                          max={10}
-                          step={1}
-                          value={attention.detalle_dolor.intensidad}
-                          onChange={(e) =>
-                            setAttention((current) => ({
-                              ...current,
-                              detalle_dolor: {
-                                ...current.detalle_dolor,
-                                intensidad: Number(e.target.value)
-                              }
-                            }))
-                          }
-                        />
+                        <Form.Label>Escala visual del dolor</Form.Label>
+                        <div className="pain-scale-guide">
+                          <div className="pain-scale-bar">
+                            {PAIN_LEVELS.map((level) => (
+                              <button
+                                key={level.value}
+                                type="button"
+                                className={`pain-scale-stop ${selectedPainLevel.value === level.value ? 'active' : ''}`}
+                                style={{ '--pain-color': level.color }}
+                                onClick={() =>
+                                  setAttention((current) => ({
+                                    ...current,
+                                    detalle_dolor: {
+                                      ...current.detalle_dolor,
+                                      intensidad: level.value
+                                    }
+                                  }))
+                                }
+                                aria-label={level.label}
+                              />
+                            ))}
+                          </div>
+
+                          <div className="pain-face-grid">
+                            {PAIN_LEVELS.map((level) => (
+                              <button
+                                key={level.value}
+                                type="button"
+                                className={`pain-face-card ${selectedPainLevel.value === level.value ? 'active' : ''}`}
+                                style={{ '--pain-color': level.color }}
+                                onClick={() =>
+                                  setAttention((current) => ({
+                                    ...current,
+                                    detalle_dolor: {
+                                      ...current.detalle_dolor,
+                                      intensidad: level.value
+                                    }
+                                  }))
+                                }
+                              >
+                                <span className="pain-face-emoji" aria-hidden="true">{level.face}</span>
+                                <span className="pain-face-label">{level.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </Form.Group>
+
+                      <div className="pain-scale-helper mt-3">
+                        Intensidad seleccionada: <strong>{attention.detalle_dolor.intensidad}/10</strong>
+                      </div>
                     </div>
                   )}
 
@@ -612,7 +693,7 @@ const Emergencies = () => {
             </Col>
           </Row>
 
-          <Card className="section-card">
+          <Card className="section-card" ref={historySectionRef}>
             <Card.Header className="d-flex justify-content-between align-items-center">
               <span>Historial de emergencias enviadas</span>
               <Badge bg="danger">{history.length} registros</Badge>
@@ -629,12 +710,13 @@ const Emergencies = () => {
                       <th>Apoderado</th>
                       <th>Enviado por</th>
                       <th>Estado</th>
+                      <th>Detalle</th>
                     </tr>
                   </thead>
                   <tbody>
                     {history.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="text-center text-muted py-4">
+                        <td colSpan="8" className="text-center text-muted py-4">
                           Aún no hay avisos de emergencia registrados.
                         </td>
                       </tr>
@@ -655,6 +737,15 @@ const Emergencies = () => {
                               {item.status === 'enviado' ? 'Enviado' : 'Error'}
                             </Badge>
                           </td>
+                          <td>
+                            {item.status === 'enviado' ? (
+                              <span className="text-muted">Correo enviado correctamente.</span>
+                            ) : (
+                              <span className="text-danger fw-semibold">
+                                {item.error || 'No se pudo determinar el motivo del fallo.'}
+                              </span>
+                            )}
+                          </td>
                         </tr>
                       ))
                     )}
@@ -670,3 +761,4 @@ const Emergencies = () => {
 };
 
 export default Emergencies;
+

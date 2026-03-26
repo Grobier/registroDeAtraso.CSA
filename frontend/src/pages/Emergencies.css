@@ -91,6 +91,93 @@
   background: linear-gradient(135deg, #d63a4c, #a61f34) !important;
 }
 
+.pain-scale-guide {
+  display: grid;
+  gap: 1rem;
+}
+
+.pain-scale-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(217, 225, 241, 0.9);
+}
+
+.pain-scale-stop {
+  height: 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pain-color);
+  opacity: 0.45;
+  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+}
+
+.pain-scale-stop.active {
+  opacity: 1;
+  transform: scaleY(1.1);
+  box-shadow: 0 0 0 3px rgba(34, 67, 117, 0.12);
+}
+
+.pain-face-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.pain-face-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.95rem 0.8rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(217, 225, 241, 0.95);
+  background: rgba(255, 255, 255, 0.94);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.pain-face-card:hover,
+.pain-face-card:focus {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--pain-color) 50%, white);
+  box-shadow: 0 12px 24px rgba(34, 67, 117, 0.09);
+}
+
+.pain-face-card.active {
+  border-color: color-mix(in srgb, var(--pain-color) 60%, white);
+  background: color-mix(in srgb, var(--pain-color) 12%, white);
+  box-shadow: 0 14px 28px rgba(34, 67, 117, 0.12);
+}
+
+.pain-face-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pain-color) 18%, white);
+  font-size: 2.3rem;
+  line-height: 1;
+}
+
+.pain-face-label {
+  color: #294365;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.35;
+}
+
+.pain-scale-helper {
+  margin-top: 0.45rem;
+  color: #6b84a6;
+  font-size: 0.82rem;
+}
+
 .emergency-template-title {
   display: block;
   font-size: 0.95rem;
@@ -145,6 +232,10 @@
     border-radius: 1.1rem;
   }
 
+  .pain-face-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .emergency-history-table td:nth-child(2),
   .emergency-history-table td:nth-child(3) {
     min-width: 150px;
@@ -159,6 +250,19 @@
   .emergency-preview {
     font-size: 0.9rem;
     line-height: 1.55;
+  }
+
+  .pain-scale-bar {
+    gap: 0.3rem;
+    padding: 0.45rem;
+  }
+
+  .pain-face-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pain-face-card {
+    padding: 0.85rem 0.7rem;
   }
 
   .emergency-checkbox-grid .form-check {
