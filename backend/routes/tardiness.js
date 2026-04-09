@@ -189,21 +189,25 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
         const mailOptions = {
           from: emailSender,
           to: guardianEmail,
-          subject: 'NotificaciÃ³n de Atraso',
+          subject: 'Notificación de atraso',
           text:
-            `Estimado(a) apoderado(a) de ${nombreCompleto},:
-Le informamos que el/la estudiante ${nombreCompleto} registrÃ³ un atraso el dÃ­a ${fechaFormateada}, ingresando al establecimiento a las ${horaFormateada}.
+            `Estimado(a) apoderado(a) de ${nombreCompleto}:
+
+Le informamos que el/la estudiante ${nombreCompleto} registró un atraso el día ${fechaFormateada}, ingresando al establecimiento a las ${horaFormateada}.
 Motivo del atraso: ${motivo}
-Le recordamos que la puntualidad es fundamental para favorecer el proceso de aprendizaje y que este registro serÃ¡ considerado en la revisiÃ³n mensual, segÃºn lo establecido en nuestro Manual de Convivencia Escolar, el cual puede revisar en:
-https://www.colegiosaintarieli.cl/normativa/reglamentos-internos.
-Agradecemos su atenciÃ³n y compromiso.
+
+Le recordamos que la puntualidad es fundamental para favorecer el proceso de aprendizaje y que este registro será considerado en la revisión mensual, según lo establecido en nuestro Manual de Convivencia Escolar, el cual puede revisar en:
+https://www.colegiosaintarieli.cl/normativa/reglamentos-internos
+
+Agradecemos su atención y compromiso.
+
 Atentamente,
 Equipo directivo.`
         };
 
         try {
           const mailInfo = await sendEmail(mailOptions, 20000);
-          console.log('âœ… Correo enviado:', mailInfo.messageId);
+          console.log('Correo enviado:', mailInfo.messageId);
           responseData.message += ' y correo enviado al apoderado';
           responseData.emailSent = true;
 
@@ -217,7 +221,7 @@ Equipo directivo.`
             estado: 'enviado'
           });
         } catch (mailError) {
-          console.error('âŒ Error al enviar correo:', mailError.message);
+          console.error('Error al enviar correo:', mailError.message);
           responseData.message += ' (atraso registrado, pero el correo falló)';
           responseData.emailError = mailError.message || 'No fue posible enviar el correo al apoderado';
 
@@ -238,65 +242,10 @@ Equipo directivo.`
       }
     } else {
       responseData.message += ' (correo no enviado - estudiante no encontrado)';
-      responseData.emailError = 'No se encontrÃ³ el estudiante asociado al atraso';
+      responseData.emailError = 'No se encontró el estudiante asociado al atraso';
     }
 
     return res.status(201).json(responseData);
-
-    /*
-    if (student) {
-      if (student.correoApoderado && student.correoApoderado.trim() !== '') {
-        const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
-        const fechaFormateada = moment(newTardiness.fecha).tz('America/Santiago').format('DD/MM/YYYY');
-        const horaFormateada = horaRegistro;
-
-        const mailOptions = {
-          from: emailSender,
-          to: student.correoApoderado,
-          subject: 'Notificación de Atraso',
-          text:
-            `Estimado(a) apoderado(a) de ${nombreCompleto},:
-Le informamos que el/la estudiante ${nombreCompleto} registró un atraso el día ${fechaFormateada}, ingresando al establecimiento a las ${horaFormateada}.
-Motivo del atraso: ${motivo}
-Le recordamos que la puntualidad es fundamental para favorecer el proceso de aprendizaje y que este registro será considerado en la revisión mensual, según lo establecido en nuestro Manual de Convivencia Escolar, el cual puede revisar en:
-https://www.colegiosaintarieli.cl/normativa/reglamentos-internos.
-Agradecemos su atención y compromiso.
-Atentamente,
-Equipo directivo.`
-        };
-
-        sendEmail(mailOptions)
-          .then((mailInfo) => {
-            console.log('✅ Correo enviado:', mailInfo.messageId);
-          })
-          .catch((mailError) => {
-            console.error('❌ Error al enviar correo:', mailError.message);
-          });
-      }
-    }
-
-    const responseData = {
-      message: `Atraso registrado como ${concepto}`,
-      concepto,
-      requiereCertificado,
-      trajoCertificado: !!trajo,
-      emailSent: null,
-      emailError: null
-    };
-
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    if (student && student.correoApoderado && student.correoApoderado.trim() !== '') {
-      responseData.message += ' y correo enviado al apoderado';
-      responseData.emailSent = true;
-    } else {
-      responseData.message += ' (correo no enviado - sin correo configurado)';
-      responseData.emailSent = false;
-      responseData.emailError = 'No hay correo configurado para el apoderado';
-    }
-
-    res.status(201).json(responseData);
-    */
   } catch (error) {
     console.error('Error completo:', error);
 
