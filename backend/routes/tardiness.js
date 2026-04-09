@@ -204,7 +204,7 @@ Equipo directivo.`
         };
 
         try {
-          const mailInfo = await sendEmail(mailOptions);
+          const mailInfo = await sendEmail(mailOptions, 20000);
           console.log('âœ… Correo enviado:', mailInfo.messageId);
           responseData.message += ' y correo enviado al apoderado';
           responseData.emailSent = true;
