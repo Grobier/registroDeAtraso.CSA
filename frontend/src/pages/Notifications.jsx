@@ -10,6 +10,10 @@ import './Notifications.css';
 
 // Configuración de la API
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
+const DEFAULT_WORKING_DAYS_BY_MONTH = {
+  1: 20, 2: 20, 3: 20, 4: 21, 5: 19, 6: 12,
+  7: 18, 8: 20, 9: 17, 10: 21, 11: 20, 12: 9
+};
 
 // Componente memoizado para filas de estudiantes - OPTIMIZACIÓN
 const StudentRow = memo(({ 
@@ -17,8 +21,6 @@ const StudentRow = memo(({
   isSelected, 
   onSelect, 
   getTardinessColor, 
-  getConceptoColor, 
-  getConceptoLabel,
   calculateMonthlyPunctuality,
   getCurrentMonth,
   getCurrentYear,
@@ -47,56 +49,21 @@ const StudentRow = memo(({
         {student.nombres} {student.apellidosPaterno} {student.apellidosMaterno}
       </td>
       <td>{student.curso}</td>
-      <td className="text-truncate notifications-email-cell" title={student.correoApoderado}>
-        {student.correoApoderado}
-      </td>
       <td>
-        <Badge bg={getTardinessColor(student.totalAtrasos)} className="notifications-pill-badge">
-          {student.totalAtrasos}
-        </Badge>
+        <Button
+          variant="link"
+          className="notifications-history-trigger"
+          onClick={() => handleShowDetails(student)}
+        >
+          <Badge bg={getTardinessColor(student.totalAtrasos)} className="notifications-pill-badge">
+            {student.totalAtrasos}
+          </Badge>
+        </Button>
       </td>
       <td className="text-center notifications-compact-cell">
         <Badge bg={student.totalCertificados > 0 ? 'info' : 'secondary'} className="notifications-pill-badge">
           🏥 {student.totalCertificados || 0}
         </Badge>
-      </td>
-      <td className="text-center notifications-compact-cell">
-        {student.atrasos && student.atrasos.length > 0 ? (
-          <div className="notifications-date-cell">
-            <div className="fw-bold text-primary">
-              {new Date(student.atrasos[0].fecha).toLocaleDateString('es-CL')}
-            </div>
-            <div className="text-muted notifications-secondary-text">
-              {student.atrasos[0].hora}
-            </div>
-          </div>
-        ) : (
-          <small className="text-muted">N/A</small>
-        )}
-      </td>
-      <td>
-        {student.atrasos && student.atrasos.length > 0 ? (
-          <div className="d-flex flex-column gap-2">
-            <Badge 
-              bg={getConceptoColor(student.atrasos[0].concepto)}
-              className="notifications-pill-badge"
-              title="Click para ver todos los conceptos de atrasos"
-            >
-              {getConceptoLabel(student.atrasos[0].concepto)}
-            </Badge>
-            <Button
-              variant="outline-primary"
-              size="sm"
-              onClick={() => handleShowDetails(student)}
-              title="Ver todos los conceptos"
-              className="notifications-action-btn"
-            >
-              Ver
-            </Button>
-          </div>
-        ) : (
-          <small className="text-muted">N/A</small>
-        )}
       </td>
       <td className="text-center notifications-compact-cell">
         <div className="d-flex flex-column gap-2">
@@ -265,6 +232,18 @@ const Notifications = () => {
   const [selectedStudentDetails, setSelectedStudentDetails] = useState(null);
   const [showPunctualityModal, setShowPunctualityModal] = useState(false);
   const [selectedStudentPunctuality, setSelectedStudentPunctuality] = useState(null);
+  const [workingDaysByMonth, setWorkingDaysByMonth] = useState(() => {
+    try {
+      const savedConfig = localStorage.getItem('notifications-working-days');
+      if (!savedConfig) return DEFAULT_WORKING_DAYS_BY_MONTH;
+
+      const parsedConfig = JSON.parse(savedConfig);
+      return { ...DEFAULT_WORKING_DAYS_BY_MONTH, ...parsedConfig };
+    } catch (error) {
+      console.warn('No fue posible cargar la configuración de días hábiles:', error);
+      return DEFAULT_WORKING_DAYS_BY_MONTH;
+    }
+  });
   const [emailForm, setEmailForm] = useState({
     asunto: 'Notificación de Atrasos - Estudiante',
     contenido: `Estimado apoderado,
@@ -280,6 +259,10 @@ Atentamente,
 Equipo Directivo`
   });
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    localStorage.setItem('notifications-working-days', JSON.stringify(workingDaysByMonth));
+  }, [workingDaysByMonth]);
   
   // Estados para filtro y paginación
   const [searchTerm, setSearchTerm] = useState('');
@@ -542,19 +525,8 @@ Equipo Directivo`
     setShowConfirmationModal(false);
   };
 
-  // Abrir modal de detalles de conceptos - OPTIMIZADA
+  // Abrir modal de historial de atrasos - OPTIMIZADA
   const handleShowDetails = useCallback((student) => {
-    console.log('🔍 DEBUGGING - Datos del estudiante:', student);
-    console.log('🔍 DEBUGGING - Atrasos del estudiante:', student.atrasos);
-    if (student.atrasos) {
-      student.atrasos.forEach((atraso, index) => {
-        console.log(`🔍 DEBUGGING - Atraso ${index}:`, {
-          concepto: atraso.concepto,
-          trajoCertificado: atraso.trajoCertificado,
-          certificadoAdjunto: atraso.certificadoAdjunto
-        });
-      });
-    }
     setSelectedStudentDetails(student);
     setShowDetailsModal(true);
   }, []);
@@ -563,6 +535,19 @@ Equipo Directivo`
   const handleShowPunctualityAnalysis = useCallback((student) => {
     setSelectedStudentPunctuality(student);
     setShowPunctualityModal(true);
+  }, []);
+
+  const handleWorkingDaysChange = useCallback((month, value) => {
+    const numericValue = Number.parseInt(value, 10);
+
+    setWorkingDaysByMonth((prev) => ({
+      ...prev,
+      [month]: Number.isNaN(numericValue) ? 0 : Math.max(0, numericValue)
+    }));
+  }, []);
+
+  const resetWorkingDaysConfig = useCallback(() => {
+    setWorkingDaysByMonth(DEFAULT_WORKING_DAYS_BY_MONTH);
   }, []);
 
 
@@ -1352,12 +1337,6 @@ Equipo Directivo`
   // Función para calcular el porcentaje de puntualidad mensual - OPTIMIZADA
   const calculateMonthlyPunctuality = useCallback((student, month, year) => {
     try {
-      // Días hábiles por mes - Cacheado para mejor rendimiento
-      const workingDaysByMonth = {
-        1: 20, 2: 20, 3: 20, 4: 21, 5: 19, 6: 12,
-        7: 18, 8: 20, 9: 17, 10: 21, 11: 20, 12: 9
-      };
-      
       // Obtener atrasos del mes específico
       if (!student.atrasos || !Array.isArray(student.atrasos)) {
         return { percentage: 100, grade: 'Excelente', color: 'success', workingDays: workingDaysByMonth[month] || 0, tardiness: 0, punctualDays: workingDaysByMonth[month] || 0 };
@@ -1405,7 +1384,7 @@ Equipo Directivo`
       console.warn('Error calculando puntualidad mensual:', error);
       return { percentage: 100, grade: 'Excelente', color: 'success', workingDays: 0, tardiness: 0, punctualDays: 0 };
     }
-  }, []);
+  }, [workingDaysByMonth]);
 
   // Función para obtener el mes actual - OPTIMIZADA
   const getCurrentMonth = useCallback(() => {
@@ -1943,7 +1922,7 @@ Equipo Directivo`
                   <Table striped bordered hover size="sm" className="table-compact notifications-student-table">
                     <thead>
                       <tr>
-                        <th className="notifications-col-check" style={{ width: '52px', textAlign: 'center' }}>
+                        <th style={{ width: '44px', textAlign: 'center' }}>
                           <Form.Check
                             type="checkbox"
                             checked={
@@ -1965,17 +1944,14 @@ Equipo Directivo`
                             className="notifications-row-check"
                           />
                         </th>
-                        <th className="notifications-col-rut" style={{ width: '102px' }}>RUT</th>
-                        <th className="notifications-col-name" style={{ width: '232px' }}>Nombre Completo</th>
-                        <th className="notifications-col-course" style={{ width: '78px' }}>Curso</th>
-                        <th className="notifications-col-email" style={{ width: '210px' }}>Email Apoderado</th>
-                        <th className="notifications-col-total" style={{ width: '96px' }}>
+                        <th style={{ width: '90px' }}>RUT</th>
+                        <th style={{ width: '250px' }}>Nombre Completo</th>
+                        <th style={{ width: '72px' }}>Curso</th>
+                        <th style={{ width: '92px' }}>
                           {startDate && endDate ? 'Atrasos del Período' : 'Total Atrasos'}
                         </th>
-                        <th className="notifications-col-certificates" style={{ width: '96px' }}>Certificados</th>
-                        <th className="notifications-col-date" style={{ width: '112px' }}>Último Atraso</th>
-                        <th className="notifications-col-concept" style={{ width: '148px' }}>Concepto Último Atraso</th>
-                        <th className="notifications-col-rating" style={{ width: '138px' }}>Calificación Mensual</th>
+                        <th style={{ width: '92px' }}>Certificados</th>
+                        <th style={{ width: '150px' }}>Calificación Mensual</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1986,8 +1962,6 @@ Equipo Directivo`
                           isSelected={selectedStudents.includes(student.rut)}
                           onSelect={handleStudentSelection}
                           getTardinessColor={getTardinessColor}
-                          getConceptoColor={getConceptoColor}
-                          getConceptoLabel={getConceptoLabel}
                           calculateMonthlyPunctuality={calculateMonthlyPunctuality}
                           getCurrentMonth={getCurrentMonth}
                           getCurrentYear={getCurrentYear}
@@ -2427,7 +2401,7 @@ Equipo Directivo`
          </div>
        )}
 
-       {/* Modal de Detalles de Conceptos */}
+       {/* Modal de Historial de Atrasos */}
        <Modal 
          show={showDetailsModal} 
          onHide={() => setShowDetailsModal(false)} 
@@ -2439,7 +2413,7 @@ Equipo Directivo`
        >
          <Modal.Header closeButton>
            <Modal.Title>
-             📋 Conceptos de Atrasos - {selectedStudentDetails?.nombres} {selectedStudentDetails?.apellidosPaterno}
+             📋 Historial de Atrasos - {selectedStudentDetails?.nombres} {selectedStudentDetails?.apellidosPaterno}
            </Modal.Title>
          </Modal.Header>
          <Modal.Body>
@@ -2453,7 +2427,7 @@ Equipo Directivo`
                  <strong>RUT:</strong> {selectedStudentDetails.rut}
                </div>
                
-               <h6>Historial Completo de Conceptos de Atrasos:</h6>
+               <h6>Historial completo de atrasos:</h6>
                <div className="table-responsive">
                  <Table striped bordered hover size="sm">
                    <thead>
@@ -2545,7 +2519,12 @@ Equipo Directivo`
                  <strong>RUT:</strong> {selectedStudentPunctuality.rut}
                </div>
                
-               <h6>Análisis de Puntualidad por Mes - Año 2025:</h6>
+               <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                 <h6 className="mb-0">Análisis de Puntualidad por Mes - Año {getCurrentYear()}:</h6>
+                 <Button variant="outline-secondary" size="sm" onClick={resetWorkingDaysConfig}>
+                   Restablecer días hábiles
+                 </Button>
+               </div>
                <div className="table-responsive">
                  <Table striped bordered hover size="sm">
                    <thead>
@@ -2561,14 +2540,23 @@ Equipo Directivo`
                    <tbody>
                      {Array.from({ length: 12 }, (_, index) => {
                        const month = index + 1;
-                       const punctuality = calculateMonthlyPunctuality(selectedStudentPunctuality, month, 2025);
+                       const currentYear = getCurrentYear();
+                       const punctuality = calculateMonthlyPunctuality(selectedStudentPunctuality, month, currentYear);
                        
                        return (
                          <tr key={month}>
                            <td>
-                             <strong>{new Date(2025, month - 1, 1).toLocaleDateString('es-CL', { month: 'long' })}</strong>
+                             <strong>{new Date(currentYear, month - 1, 1).toLocaleDateString('es-CL', { month: 'long' })}</strong>
                            </td>
-                           <td className="text-center">{punctuality.workingDays}</td>
+                           <td className="text-center">
+                             <Form.Control
+                               type="number"
+                               min="0"
+                               value={workingDaysByMonth[month] ?? 0}
+                               onChange={(e) => handleWorkingDaysChange(month, e.target.value)}
+                               className="notifications-working-days-input"
+                             />
+                           </td>
                            <td className="text-center">
                              <Badge bg={punctuality.tardiness > 0 ? 'danger' : 'success'}>
                                {punctuality.tardiness}
@@ -2601,14 +2589,20 @@ Equipo Directivo`
                  <h6>📈 Resumen del Año Escolar:</h6>
                  <div className="row">
                    <div className="col-md-6">
-                     <strong>Total de días hábiles:</strong> 209 días
+                     <strong>Total de días hábiles:</strong> {Object.values(workingDaysByMonth).reduce((total, days) => total + Number(days || 0), 0)} días
                      <br />
-                     <strong>Total de atrasos:</strong> {selectedStudentPunctuality.totalAtrasos || 0} días
+                     <strong>Total de atrasos:</strong> {selectedStudentPunctuality.atrasos?.filter((atraso) => {
+                       const atrasoDate = new Date(atraso.fecha);
+                       return atrasoDate.getFullYear() === getCurrentYear();
+                     }).length || 0} días
                    </div>
                    <div className="col-md-6">
                      <strong>Promedio anual:</strong> {(() => {
-                       const totalWorkingDays = 209;
-                       const totalTardiness = selectedStudentPunctuality.totalAtrasos || 0;
+                       const totalWorkingDays = Object.values(workingDaysByMonth).reduce((total, days) => total + Number(days || 0), 0);
+                       const totalTardiness = selectedStudentPunctuality.atrasos?.filter((atraso) => {
+                         const atrasoDate = new Date(atraso.fecha);
+                         return atrasoDate.getFullYear() === getCurrentYear();
+                       }).length || 0;
                        const annualPercentage = totalWorkingDays > 0 ? Math.round(((totalWorkingDays - totalTardiness) / totalWorkingDays) * 100) : 100;
                        return `${annualPercentage}%`;
                      })()} de puntualidad
