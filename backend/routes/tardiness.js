@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const Tardiness = require('../models/Tardiness');
 const Student = require('../models/Student');
+const EmailLog = require('../models/EmailLog');
 const moment = require('moment-timezone');
 const ActivityLog = require('../models/ActivityLog');
 const { sendEmail, verifyEmailConnection } = require('../config/emailConfig');
@@ -21,6 +22,8 @@ const buildRutFlexibleRegex = (normalizedRut) => {
     .join('[.\\-]?');
   return new RegExp(`^${escaped}$`, 'i');
 };
+
+const sanitizeEmail = (email) => email?.toString()?.trim()?.toLowerCase();
 
 // Configuración de Multer para subida de archivos
 const storage = multer.diskStorage({
@@ -166,6 +169,81 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       student = await Student.findOne({
         rut: { $regex: new RegExp(searchRut.replace(/[-\dkK]/g, ''), 'i') }
       });
+    }
+
+    {
+    const responseData = {
+      message: `Atraso registrado como ${concepto}`,
+      concepto,
+      requiereCertificado,
+      trajoCertificado: !!trajo,
+      emailSent: false,
+      emailError: null
+    };
+
+    if (student) {
+      const guardianEmail = sanitizeEmail(student.correoApoderado);
+
+      if (guardianEmail) {
+        const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
+        const fechaFormateada = moment(newTardiness.fecha).tz('America/Santiago').format('DD/MM/YYYY');
+        const horaFormateada = horaRegistro;
+        const mailOptions = {
+          from: `"Colegio Saint Arieli" <${process.env.EMAIL_USER}>`,
+          to: guardianEmail,
+          subject: 'NotificaciÃ³n de Atraso',
+          text:
+            `Estimado(a) apoderado(a) de ${nombreCompleto},:
+Le informamos que el/la estudiante ${nombreCompleto} registrÃ³ un atraso el dÃ­a ${fechaFormateada}, ingresando al establecimiento a las ${horaFormateada}.
+Motivo del atraso: ${motivo}
+Le recordamos que la puntualidad es fundamental para favorecer el proceso de aprendizaje y que este registro serÃ¡ considerado en la revisiÃ³n mensual, segÃºn lo establecido en nuestro Manual de Convivencia Escolar, el cual puede revisar en:
+https://www.colegiosaintarieli.cl/normativa/reglamentos-internos.
+Agradecemos su atenciÃ³n y compromiso.
+Atentamente,
+Equipo directivo.`
+        };
+
+        try {
+          const mailInfo = await sendEmail(mailOptions);
+          console.log('âœ… Correo enviado:', mailInfo.messageId);
+          responseData.message += ' y correo enviado al apoderado';
+          responseData.emailSent = true;
+
+          await EmailLog.create({
+            destinatarios: [guardianEmail],
+            asunto: mailOptions.subject,
+            contenido: mailOptions.text,
+            estudiantesIncluidos: [student.rut],
+            totalAtrasos: 1,
+            enviadoPor: performedBy,
+            estado: 'enviado'
+          });
+        } catch (mailError) {
+          console.error('âŒ Error al enviar correo:', mailError.message);
+          responseData.message += ' (atraso registrado, pero el correo falló)';
+          responseData.emailError = mailError.message || 'No fue posible enviar el correo al apoderado';
+
+          await EmailLog.create({
+            destinatarios: [guardianEmail],
+            asunto: mailOptions.subject,
+            contenido: mailOptions.text,
+            estudiantesIncluidos: [student.rut],
+            totalAtrasos: 1,
+            enviadoPor: performedBy,
+            estado: 'error',
+            error: responseData.emailError
+          });
+        }
+      } else {
+        responseData.message += ' (correo no enviado - sin correo configurado)';
+        responseData.emailError = 'No hay correo configurado para el apoderado';
+      }
+    } else {
+      responseData.message += ' (correo no enviado - estudiante no encontrado)';
+      responseData.emailError = 'No se encontrÃ³ el estudiante asociado al atraso';
+    }
+
+    return res.status(201).json(responseData);
     }
 
     if (student) {
