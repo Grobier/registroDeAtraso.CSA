@@ -1943,7 +1943,7 @@ Equipo Directivo`
                   <Table striped bordered hover size="sm" className="table-compact notifications-student-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '52px', textAlign: 'center' }}>
+                        <th className="notifications-col-check" style={{ width: '52px', textAlign: 'center' }}>
                           <Form.Check
                             type="checkbox"
                             checked={
@@ -1965,17 +1965,17 @@ Equipo Directivo`
                             className="notifications-row-check"
                           />
                         </th>
-                        <th style={{ width: '112px' }}>RUT</th>
-                        <th style={{ width: '280px' }}>Nombre Completo</th>
-                        <th style={{ width: '86px' }}>Curso</th>
-                        <th style={{ width: '240px' }}>Email Apoderado</th>
-                        <th style={{ width: '110px' }}>
+                        <th className="notifications-col-rut" style={{ width: '102px' }}>RUT</th>
+                        <th className="notifications-col-name" style={{ width: '232px' }}>Nombre Completo</th>
+                        <th className="notifications-col-course" style={{ width: '78px' }}>Curso</th>
+                        <th className="notifications-col-email" style={{ width: '210px' }}>Email Apoderado</th>
+                        <th className="notifications-col-total" style={{ width: '96px' }}>
                           {startDate && endDate ? 'Atrasos del Período' : 'Total Atrasos'}
                         </th>
-                        <th style={{ width: '112px' }}>Certificados</th>
-                        <th style={{ width: '100px' }}>Último Atraso</th>
-                        <th style={{ width: '120px' }}>Concepto Último Atraso</th>
-                        <th style={{ width: '100px' }}>Calificación Mensual</th>
+                        <th className="notifications-col-certificates" style={{ width: '96px' }}>Certificados</th>
+                        <th className="notifications-col-date" style={{ width: '112px' }}>Último Atraso</th>
+                        <th className="notifications-col-concept" style={{ width: '148px' }}>Concepto Último Atraso</th>
+                        <th className="notifications-col-rating" style={{ width: '138px' }}>Calificación Mensual</th>
                       </tr>
                     </thead>
                     <tbody>
