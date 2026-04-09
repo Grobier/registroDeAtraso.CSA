@@ -5,6 +5,7 @@ const EmergencyLog = require('../models/EmergencyLog');
 const ActivityLog = require('../models/ActivityLog');
 const { sendEmail } = require('../config/emailConfig');
 const { ensureAuthenticated } = require('../middlewares/auth');
+const emailSender = process.env.RESEND_FROM || process.env.EMAIL_FROM || process.env.EMAIL_USER;
 
 router.post('/send', ensureAuthenticated, async (req, res) => {
   try {
@@ -34,7 +35,7 @@ router.post('/send', ensureAuthenticated, async (req, res) => {
     const studentName = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`.replace(/\s+/g, ' ').trim();
 
     const mailOptions = {
-      from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+      from: emailSender,
       to: student.correoApoderado,
       subject,
       text: message,

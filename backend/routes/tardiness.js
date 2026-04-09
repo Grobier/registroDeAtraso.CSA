@@ -24,6 +24,7 @@ const buildRutFlexibleRegex = (normalizedRut) => {
 };
 
 const sanitizeEmail = (email) => email?.toString()?.trim()?.toLowerCase();
+const emailSender = process.env.RESEND_FROM || process.env.EMAIL_FROM || process.env.EMAIL_USER;
 
 // Configuración de Multer para subida de archivos
 const storage = multer.diskStorage({
@@ -186,7 +187,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
         const fechaFormateada = moment(newTardiness.fecha).tz('America/Santiago').format('DD/MM/YYYY');
         const horaFormateada = horaRegistro;
         const mailOptions = {
-          from: `"Colegio Saint Arieli" <${process.env.EMAIL_USER}>`,
+          from: emailSender,
           to: guardianEmail,
           subject: 'NotificaciÃ³n de Atraso',
           text:
@@ -250,7 +251,7 @@ Equipo directivo.`
         const horaFormateada = horaRegistro;
 
         const mailOptions = {
-          from: process.env.EMAIL_USER,
+          from: emailSender,
           to: student.correoApoderado,
           subject: 'Notificación de Atraso',
           text:

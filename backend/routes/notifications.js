@@ -8,6 +8,7 @@ const { sendEmail } = require('../config/emailConfig');
 const { ensureAuthenticated } = require('../middlewares/auth');
 const moment = require('moment-timezone');
 const TIMEZONE = 'America/Santiago';
+const emailSender = process.env.RESEND_FROM || process.env.EMAIL_FROM || process.env.EMAIL_USER;
 
 // Obtener estudiantes con atrasos ordenados por cantidad
 router.get('/students-with-tardiness', ensureAuthenticated, async (req, res) => {
@@ -298,7 +299,7 @@ router.post('/send-emails', ensureAuthenticated, async (req, res) => {
     for (const email of emailsToSend) {
       try {
         const mailOptions = {
-          from: process.env.EMAIL_USER || 'tu-email@gmail.com',
+          from: emailSender,
           to: email.to,
           subject: email.subject,
           html: email.content.replace(/\n/g, '<br>')
