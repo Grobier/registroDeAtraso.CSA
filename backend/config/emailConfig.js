@@ -6,7 +6,10 @@ const createEmailTransporter = (options = {}) => {
   const isProduction = process.env.NODE_ENV === 'production';
 
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    name: 'colegiosaintarieli.cl',
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS
@@ -18,56 +21,52 @@ const createEmailTransporter = (options = {}) => {
     connectionTimeout: options.connectionTimeout || 60000,
     greetingTimeout: options.greetingTimeout || 30000,
     socketTimeout: options.socketTimeout || 60000,
-    pool: true,
-    maxConnections: 5,
-    maxMessages: 100,
     debug: !isProduction,
     logger: !isProduction
   });
 };
 
-const sendMailAttempt = (mailOptions, timeout) => {
+const sendMailAttempt = async (mailOptions, timeout) => {
   const transporter = createEmailTransporter({
     connectionTimeout: Math.max(timeout, 60000),
     greetingTimeout: Math.min(timeout, 30000),
     socketTimeout: Math.max(timeout, 60000)
   });
 
-  return new Promise((resolve, reject) => {
-    const timeoutId = setTimeout(() => {
-      transporter.close();
-      reject(new Error(`Email sending timeout after ${Math.round(timeout / 1000)} seconds`));
-    }, timeout);
+  let timeoutId;
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      clearTimeout(timeoutId);
+  try {
+    const info = await Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Email sending timeout after ${Math.round(timeout / 1000)} seconds`));
+        }, timeout);
+      })
+    ]);
 
-      if (error) {
-        transporter.close();
-
-        console.error('Error detallado al enviar correo:', {
-          code: error.code,
-          command: error.command,
-          response: error.response,
-          message: error.message
-        });
-
-        const errorMessage = error.code === 'ETIMEDOUT'
-          ? `Timeout de conexión SMTP tras ${Math.round(timeout / 1000)} segundos`
-          : error.message || 'Error desconocido al enviar correo';
-
-        const enhancedError = new Error(errorMessage);
-        enhancedError.code = error.code;
-        enhancedError.command = error.command;
-        reject(enhancedError);
-        return;
-      }
-
-      transporter.close();
-      console.log('Correo enviado exitosamente:', info.messageId);
-      resolve(info);
+    console.log('Correo enviado exitosamente:', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('Error detallado al enviar correo:', {
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      message: error.message
     });
-  });
+
+    const errorMessage = error.code === 'ETIMEDOUT'
+      ? `Timeout de conexion SMTP tras ${Math.round(timeout / 1000)} segundos`
+      : error.message || 'Error desconocido al enviar correo';
+
+    const enhancedError = new Error(errorMessage);
+    enhancedError.code = error.code;
+    enhancedError.command = error.command;
+    throw enhancedError;
+  } finally {
+    clearTimeout(timeoutId);
+    transporter.close();
+  }
 };
 
 // Funcion para enviar correo con manejo de errores mejorado.
@@ -79,7 +78,7 @@ const sendEmail = async (mailOptions, timeout = 60000) => {
       throw error;
     }
 
-    console.warn('Primer intento SMTP agotó el tiempo de espera. Reintentando una vez...');
+    console.warn('Primer intento SMTP agoto el tiempo de espera. Reintentando una vez...');
     return sendMailAttempt(mailOptions, timeout);
   }
 };
