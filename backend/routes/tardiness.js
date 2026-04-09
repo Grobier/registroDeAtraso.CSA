@@ -151,8 +151,6 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       details: `Atraso registrado para RUT: ${rut}, curso: ${curso}, concepto: ${concepto}, certificado: ${trajoCertificado ? 'Sí' : 'No'}`
     });
 
-    const todosLosEstudiantes = await Student.find({});
-
     let student = await Student.findOne({ rut: { $regex: buildRutFlexibleRegex(searchRut) } });
 
     if (!student) {
@@ -171,7 +169,6 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       });
     }
 
-    {
     const responseData = {
       message: `Atraso registrado como ${concepto}`,
       concepto,
@@ -244,8 +241,8 @@ Equipo directivo.`
     }
 
     return res.status(201).json(responseData);
-    }
 
+    /*
     if (student) {
       if (student.correoApoderado && student.correoApoderado.trim() !== '') {
         const nombreCompleto = `${student.nombres} ${student.apellidosPaterno} ${student.apellidosMaterno}`;
@@ -298,6 +295,7 @@ Equipo directivo.`
     }
 
     res.status(201).json(responseData);
+    */
   } catch (error) {
     console.error('Error completo:', error);
 
