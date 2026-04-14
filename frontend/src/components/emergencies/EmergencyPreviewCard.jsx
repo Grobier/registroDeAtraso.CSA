@@ -14,7 +14,7 @@ const EmergencyPreviewCard = ({ previewSubject, previewBody, selectedStudent, se
         </Badge>
       </Card.Header>
 
-      <Card.Body className="d-flex flex-column">
+      <Card.Body className="d-flex flex-column emergency-preview-card__body">
         <div className="emergency-preview-subject">
           <span className="page-kpi__label">Asunto</span>
           <strong>{previewSubject}</strong>
@@ -29,7 +29,7 @@ const EmergencyPreviewCard = ({ previewSubject, previewBody, selectedStudent, se
           <div className="emergency-preview">{previewBody}</div>
         </div>
 
-        <div className="d-grid mt-4">
+        <div className="d-grid mt-4 emergency-preview-card__footer">
           <Button className="emergency-send-btn" onClick={onSend} disabled={!selectedStudent || sending}>
             {sending ? 'Enviando aviso...' : 'Enviar aviso de emergencia'}
           </Button>
