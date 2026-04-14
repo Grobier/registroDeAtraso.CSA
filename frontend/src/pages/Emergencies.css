@@ -1,8 +1,68 @@
+.emergency-page {
+  --emergency-accent: #d93b55;
+  --emergency-accent-dark: #9f2337;
+  --emergency-ink: #274262;
+  --emergency-soft: #fff4f6;
+}
+
+.emergency-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(280px, 0.9fr);
+  gap: 1.25rem;
+  align-items: stretch;
+  margin-bottom: 1.75rem;
+  padding: 1.5rem;
+  border: 1px solid rgba(227, 199, 206, 0.8);
+  border-radius: 2rem;
+  background:
+    radial-gradient(circle at top right, rgba(255, 208, 215, 0.85), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 245, 247, 0.94));
+  box-shadow: 0 24px 54px rgba(113, 36, 52, 0.1);
+}
+
+.emergency-hero__content {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.emergency-hero__eyebrow,
+.emergency-card-header__eyebrow {
+  color: var(--emergency-accent-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.emergency-hero__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.emergency-hero__badge {
+  padding: 0.6rem 0.85rem !important;
+  border: 1px solid rgba(219, 227, 241, 0.85);
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: var(--emergency-ink) !important;
+}
+
+.emergency-hero__actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem;
+  border-radius: 1.5rem;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(228, 212, 218, 0.84);
+}
+
 .emergency-top-note {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.55rem 0.9rem;
+  padding: 0.8rem 1rem;
   border-radius: 999px;
   background: rgba(255, 238, 240, 0.96);
   color: #b3263b;
@@ -14,10 +74,87 @@
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 245, 246, 0.95)) !important;
 }
 
+.emergency-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.emergency-card-header__title {
+  color: var(--emergency-ink);
+  font-size: 1.08rem;
+  font-weight: 800;
+}
+
+.emergency-compose-card,
+.emergency-preview-card,
+.emergency-history-card {
+  box-shadow: 0 24px 48px rgba(39, 66, 98, 0.08);
+}
+
+.emergency-type-switch {
+  display: grid;
+  gap: 0.7rem;
+  margin-top: 1.5rem;
+}
+
+.emergency-type-switch__label {
+  color: var(--emergency-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.emergency-type-switch__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .emergency-preview {
   white-space: pre-line;
   color: #284062;
   line-height: 1.6;
+}
+
+.emergency-preview-subject {
+  display: grid;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.emergency-preview-window {
+  display: grid;
+  gap: 1rem;
+  min-height: 100%;
+  padding: 1rem;
+  border: 1px solid rgba(218, 225, 239, 0.95);
+  border-radius: 1.45rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.95));
+}
+
+.emergency-preview-window__bar {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.emergency-preview-window__bar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d5deed;
+}
+
+.emergency-preview-window__bar span:first-child {
+  background: #ff8f8f;
+}
+
+.emergency-preview-window__bar span:nth-child(2) {
+  background: #ffd06e;
+}
+
+.emergency-preview-window__bar span:last-child {
+  background: #87da98;
 }
 
 .emergency-template-list {
@@ -198,6 +335,9 @@
 
 .emergency-send-btn {
   background: linear-gradient(135deg, #e04155, #af2438) !important;
+  border: none !important;
+  min-height: 3rem !important;
+  box-shadow: 0 18px 30px rgba(175, 36, 56, 0.18);
 }
 
 .emergency-send-btn:hover,
@@ -205,7 +345,24 @@
   background: linear-gradient(135deg, #c63548, #991e31) !important;
 }
 
+.emergency-inline-alert {
+  border-radius: 1.15rem !important;
+  background: linear-gradient(180deg, rgba(239, 247, 255, 0.98), rgba(231, 242, 255, 0.92)) !important;
+}
+
+.emergency-loading-shell {
+  padding: 4rem 1rem !important;
+  border: 1px dashed rgba(212, 180, 188, 0.9);
+  border-radius: 1.75rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 247, 248, 0.92));
+}
+
 @media (max-width: 768px) {
+  .emergency-hero {
+    grid-template-columns: 1fr;
+    padding: 1.15rem;
+  }
+
   .emergency-top-note {
     width: 100%;
     justify-content: center;
@@ -243,6 +400,11 @@
 }
 
 @media (max-width: 576px) {
+  .emergency-hero {
+    border-radius: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
   .emergency-panel-title {
     font-size: 0.86rem;
   }

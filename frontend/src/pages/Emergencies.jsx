@@ -1,76 +1,21 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Badge, Button, Card, Col, Container, Form, Row, Spinner, Table } from 'react-bootstrap';
+import { Alert, Col, Container, Row, Spinner } from 'react-bootstrap';
 import Swal from 'sweetalert2';
+import EmergencyComposer from '../components/emergencies/EmergencyComposer';
+import EmergencyHero from '../components/emergencies/EmergencyHero';
+import EmergencyHistoryCard from '../components/emergencies/EmergencyHistoryCard';
+import EmergencyPreviewCard from '../components/emergencies/EmergencyPreviewCard';
+import {
+  PAIN_LEVELS,
+  PAIN_ZONE_LABELS,
+  createDefaultAttention,
+  formatAccidentLabel,
+  formatNaturalList
+} from '../components/emergencies/emergencyConfig';
 import '../styles/PageTheme.css';
 import './Emergencies.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : '');
-
-const PAIN_ZONES = [
-  'Cabeza',
-  'Cara',
-  'Cuello',
-  'Estomago',
-  'Genitales',
-  'Espalda',
-  'Brazo Izquierdo',
-  'Brazo Derecho',
-  'Pierna Izquierda',
-  'Pierna Derecha',
-  'Mano Izquierda',
-  'Mano Derecha',
-  'Pie Izquierdo',
-  'Pie Derecho'
-];
-
-const ACCIDENT_CAUSES = [
-  { value: 'colision-accidental', label: 'Colisión accidental' },
-  { value: 'caida', label: 'Caída' },
-  { value: 'golpe', label: 'Golpe' },
-  { value: 'herida-cortante', label: 'Herida cortante' },
-  { value: 'discusion-golpes', label: 'Discusión a golpes con compañero' },
-  { value: 'trayecto', label: 'Trayecto' }
-];
-
-const PAIN_ZONE_LABELS = {
-  Cabeza: 'la cabeza',
-  Cara: 'el rostro',
-  Cuello: 'el cuello',
-  Estomago: 'el estómago',
-  Genitales: 'la zona genital',
-  Espalda: 'la espalda',
-  'Brazo Izquierdo': 'el brazo izquierdo',
-  'Brazo Derecho': 'el brazo derecho',
-  'Pierna Izquierda': 'la pierna izquierda',
-  'Pierna Derecha': 'la pierna derecha',
-  'Mano Izquierda': 'la mano izquierda',
-  'Mano Derecha': 'la mano derecha',
-  'Pie Izquierdo': 'el pie izquierdo',
-  'Pie Derecho': 'el pie derecho'
-};
-
-const PAIN_LEVELS = [
-  { value: 1, label: 'Sin dolor', face: '😀', color: '#159947' },
-  { value: 2, label: 'Dolor leve', face: '🙂', color: '#67c21f' },
-  { value: 4, label: 'Dolor moderado', face: '😐', color: '#f6c739' },
-  { value: 6, label: 'Dolor fuerte', face: '😟', color: '#f18a00' },
-  { value: 8, label: 'Dolor muy fuerte', face: '😢', color: '#dc5b17' },
-  { value: 10, label: 'Dolor máximo', face: '😭', color: '#b8191f' }
-];
-
-const createDefaultAttention = () => ({
-  es_accidente: false,
-  es_dolor: false,
-  detalle_accidente: {
-    tipo: '',
-    trayecto_info: ''
-  },
-  detalle_dolor: {
-    zonas: [],
-    intensidad: 5
-  },
-  observaciones_libres: ''
-});
 
 const fetchJsonWithTimeout = async (url, options = {}, timeoutMs = 20000) => {
   const controller = new AbortController();
@@ -104,23 +49,6 @@ const fetchJsonWithTimeout = async (url, options = {}, timeoutMs = 20000) => {
   }
 };
 
-const formatAccidentLabel = (value) => {
-  const match = ACCIDENT_CAUSES.find((item) => item.value === value);
-  return match ? match.label : '';
-};
-
-const formatNaturalList = (items) => {
-  if (items.length === 0) {
-    return '';
-  }
-  if (items.length === 1) {
-    return items[0];
-  }
-  if (items.length === 2) {
-    return `${items[0]} y ${items[1]}`;
-  }
-  return `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
-};
 
 const Emergencies = () => {
   const [courses, setCourses] = useState([]);
@@ -388,6 +316,33 @@ const Emergencies = () => {
     }));
   };
 
+  const handlePainLevelChange = (value) => {
+    setAttention((current) => ({
+      ...current,
+      detalle_dolor: {
+        ...current.detalle_dolor,
+        intensidad: value
+      }
+    }));
+  };
+
+  const handleTrayectoInfoChange = (value) => {
+    setAttention((current) => ({
+      ...current,
+      detalle_accidente: {
+        ...current.detalle_accidente,
+        trayecto_info: value
+      }
+    }));
+  };
+
+  const handleObservationsChange = (value) => {
+    setAttention((current) => ({
+      ...current,
+      observaciones_libres: value
+    }));
+  };
+
   const validateAttention = () => {
     if (!selectedStudent) {
       return 'Debes seleccionar un estudiante antes de enviar el aviso.';
@@ -478,313 +433,63 @@ const Emergencies = () => {
   };
 
   return (
-    <Container fluid className="page-shell">
-      <div className="page-title-block">
-        <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
-          <div>
-            <h1 className="page-title">Emergencias</h1>
-            <p className="page-subtitle">Registro rápido de atenciones de enfermería con evidencia del aviso al apoderado.</p>
-          </div>
-          <div className="emergency-top-note">🚑 Aviso prioritario para retiro de estudiantes</div>
-        </div>
-      </div>
+    <Container fluid className="page-shell emergency-page">
+      <EmergencyHero
+        totalStudents={students.length}
+        historyCount={history.length}
+        selectedStudent={selectedStudent}
+        onRefresh={loadDataWithDiagnostics}
+        loading={loading}
+      />
 
       {message.text && <Alert variant={message.type}>{message.text}</Alert>}
 
       {loading ? (
-        <div className="text-center py-5">
+        <div className="text-center py-5 emergency-loading-shell">
           <Spinner animation="border" role="status" />
+          <p className="mt-3 mb-0 text-muted">Sincronizando estudiantes, cursos e historial de emergencias.</p>
         </div>
       ) : (
         <>
           <Row className="g-4 mb-4">
             <Col lg={7}>
-              <Card className="section-card emergency-highlight-card h-100">
-                <Card.Header>Configurar aviso de emergencia</Card.Header>
-                <Card.Body>
-                  <Row className="g-3">
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Curso</Form.Label>
-                        <Form.Select value={selectedCourse} onChange={(e) => setSelectedCourse(e.target.value)}>
-                          <option value="">Todos los cursos</option>
-                          {courses.map((course) => (
-                            <option key={course} value={course}>
-                              {course}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
-                        <Form.Label>Estudiante</Form.Label>
-                        <Form.Select value={selectedStudentRut} onChange={(e) => setSelectedStudentRut(e.target.value)}>
-                          <option value="">Selecciona un estudiante</option>
-                          {filteredStudents.map((student) => (
-                            <option key={student.rut} value={student.rut}>
-                              {student.nombres} {student.apellidosPaterno} {student.apellidosMaterno} - {student.curso}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </Form.Group>
-                    </Col>
-                  </Row>
-
-                  <div className="mt-4">
-                    <Form.Label>Tipo de atención</Form.Label>
-                    <div className="emergency-toggle-row">
-                      <Button
-                        variant={attention.es_dolor ? 'danger' : 'outline-danger'}
-                        className={`emergency-toggle-btn ${attention.es_dolor ? 'active' : ''}`}
-                        onClick={() => toggleAttentionType('dolor')}
-                      >
-                        Dolor
-                      </Button>
-                      <Button
-                        variant={attention.es_accidente ? 'danger' : 'outline-danger'}
-                        className={`emergency-toggle-btn ${attention.es_accidente ? 'active' : ''}`}
-                        onClick={() => toggleAttentionType('accidente')}
-                      >
-                        Accidente
-                      </Button>
-                    </div>
-                  </div>
-
-                  {attention.es_dolor && (
-                    <div className="emergency-detail-panel mt-4">
-                      <div className="emergency-panel-title">Sintomatología de dolor</div>
-                      <div className="emergency-checkbox-grid">
-                        {PAIN_ZONES.map((zone) => (
-                          <Form.Check
-                            key={zone}
-                            type="checkbox"
-                            id={`pain-zone-${zone}`}
-                            label={zone}
-                            checked={attention.detalle_dolor.zonas.includes(zone)}
-                            onChange={() => togglePainZone(zone)}
-                          />
-                        ))}
-                      </div>
-
-                      <Form.Group className="mt-4">
-                        <Form.Label>Escala visual del dolor</Form.Label>
-                        <div className="pain-scale-guide">
-                          <div className="pain-scale-bar">
-                            {PAIN_LEVELS.map((level) => (
-                              <button
-                                key={level.value}
-                                type="button"
-                                className={`pain-scale-stop ${selectedPainLevel.value === level.value ? 'active' : ''}`}
-                                style={{ '--pain-color': level.color }}
-                                onClick={() =>
-                                  setAttention((current) => ({
-                                    ...current,
-                                    detalle_dolor: {
-                                      ...current.detalle_dolor,
-                                      intensidad: level.value
-                                    }
-                                  }))
-                                }
-                                aria-label={level.label}
-                              />
-                            ))}
-                          </div>
-
-                          <div className="pain-face-grid">
-                            {PAIN_LEVELS.map((level) => (
-                              <button
-                                key={level.value}
-                                type="button"
-                                className={`pain-face-card ${selectedPainLevel.value === level.value ? 'active' : ''}`}
-                                style={{ '--pain-color': level.color }}
-                                onClick={() =>
-                                  setAttention((current) => ({
-                                    ...current,
-                                    detalle_dolor: {
-                                      ...current.detalle_dolor,
-                                      intensidad: level.value
-                                    }
-                                  }))
-                                }
-                              >
-                                <span className="pain-face-emoji" aria-hidden="true">{level.face}</span>
-                                <span className="pain-face-label">{level.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </Form.Group>
-
-                      <div className="pain-scale-helper mt-3">
-                        Intensidad seleccionada: <strong>{attention.detalle_dolor.intensidad}/10</strong>
-                      </div>
-                    </div>
-                  )}
-
-                  {attention.es_accidente && (
-                    <div className="emergency-detail-panel mt-4">
-                      <div className="emergency-panel-title">Origen del incidente</div>
-                      <div className="emergency-checkbox-grid emergency-checkbox-grid--single">
-                        {ACCIDENT_CAUSES.map((cause) => (
-                          <Form.Check
-                            key={cause.value}
-                            type="checkbox"
-                            id={`accident-${cause.value}`}
-                            label={cause.label}
-                            checked={attention.detalle_accidente.tipo === cause.value}
-                            onChange={() => handleAccidentChange(cause.value)}
-                          />
-                        ))}
-                      </div>
-
-                      {attention.detalle_accidente.tipo === 'trayecto' && (
-                        <Form.Group className="mt-3">
-                          <Form.Label>Detalle de trayecto</Form.Label>
-                          <Form.Control
-                            type="text"
-                            value={attention.detalle_accidente.trayecto_info}
-                            onChange={(e) =>
-                              setAttention((current) => ({
-                                ...current,
-                                detalle_accidente: {
-                                  ...current.detalle_accidente,
-                                  trayecto_info: e.target.value
-                                }
-                              }))
-                            }
-                            placeholder="Ejemplo: bajando del furgón o patio central"
-                          />
-                        </Form.Group>
-                      )}
-                    </div>
-                  )}
-
-                  <Form.Group className="mt-4">
-                    <Form.Label>Observaciones de enfermería</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      rows={5}
-                      value={attention.observaciones_libres}
-                      onChange={(e) =>
-                        setAttention((current) => ({
-                          ...current,
-                          observaciones_libres: e.target.value
-                        }))
-                      }
-                      placeholder="Detalles específicos no contemplados en las opciones anteriores."
-                    />
-                  </Form.Group>
-
-                  {selectedStudent && (
-                    <Alert variant="info" className="mt-4 mb-0">
-                      Se enviará a <strong>{selectedStudent.correoApoderado}</strong> para el estudiante{' '}
-                      <strong>{previewValues.studentName}</strong> del curso <strong>{previewValues.course}</strong>.
-                    </Alert>
-                  )}
-                </Card.Body>
-              </Card>
+              <EmergencyComposer
+                courses={courses}
+                filteredStudents={filteredStudents}
+                selectedCourse={selectedCourse}
+                selectedStudentRut={selectedStudentRut}
+                selectedStudent={selectedStudent}
+                previewValues={previewValues}
+                attention={attention}
+                selectedPainLevel={selectedPainLevel}
+                onCourseChange={setSelectedCourse}
+                onStudentChange={setSelectedStudentRut}
+                onToggleAttentionType={toggleAttentionType}
+                onTogglePainZone={togglePainZone}
+                onPainLevelChange={handlePainLevelChange}
+                onAccidentChange={handleAccidentChange}
+                onTrayectoInfoChange={handleTrayectoInfoChange}
+                onObservationsChange={handleObservationsChange}
+              />
             </Col>
 
             <Col lg={5}>
-              <Card className="section-card h-100">
-                <Card.Header>Vista previa del correo</Card.Header>
-                <Card.Body>
-                  <div className="mb-3">
-                    <div className="page-kpi__label">Asunto</div>
-                    <div className="fw-bold text-dark">{previewSubject}</div>
-                  </div>
-                  <div className="page-panel p-3">
-                    <div className="emergency-preview">{previewBody}</div>
-                  </div>
-                  <div className="d-grid mt-4">
-                    <Button className="emergency-send-btn" onClick={handleSendEmergency} disabled={!selectedStudent || sending}>
-                      {sending ? 'Enviando aviso...' : '🚑 Enviar aviso de emergencia'}
-                    </Button>
-                  </div>
-                </Card.Body>
-              </Card>
+              <EmergencyPreviewCard
+                previewSubject={previewSubject}
+                previewBody={previewBody}
+                selectedStudent={selectedStudent}
+                sending={sending}
+                onSend={handleSendEmergency}
+              />
             </Col>
           </Row>
 
-          <Card className="section-card" ref={historySectionRef}>
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <span>Historial de emergencias enviadas</span>
-              <Badge bg="danger">{filteredHistory.length} registros</Badge>
-            </Card.Header>
-            <Card.Body>
-              <Row className="g-3 mb-3">
-                <Col md={6} lg={5}>
-                  <Form.Group>
-                    <Form.Label>Buscar estudiante en historial</Form.Label>
-                    <Form.Control
-                      type="text"
-                      value={historyQuery}
-                      onChange={(e) => setHistoryQuery(e.target.value)}
-                      placeholder="Busca por nombre, RUT o curso"
-                    />
-                  </Form.Group>
-                </Col>
-              </Row>
-              <div className="table-responsive table-shell">
-                <Table className="emergency-history-table">
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Estudiante</th>
-                      <th>Curso</th>
-                      <th>Tipo</th>
-                      <th>Apoderado</th>
-                      <th>Enviado por</th>
-                      <th>Estado</th>
-                      <th>Detalle</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredHistory.length === 0 ? (
-                      <tr>
-                        <td colSpan="8" className="text-center text-muted py-4">
-                          {historyQuery.trim()
-                            ? 'No hay resultados para esa búsqueda en el historial.'
-                            : 'Aún no hay avisos de emergencia registrados.'}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredHistory.map((item) => (
-                        <tr key={item._id}>
-                          <td>{new Date(item.fechaEnvio).toLocaleString('es-CL')}</td>
-                          <td>
-                            <div className="fw-bold">{item.studentName}</div>
-                            <div className="text-muted">{item.studentRut}</div>
-                          </td>
-                          <td>{item.course}</td>
-                          <td>{item.templateLabel}</td>
-                          <td>{item.guardianEmail}</td>
-                          <td>{item.sentBy}</td>
-                          <td>
-                            <Badge bg={item.status === 'enviado' ? 'success' : item.status === 'procesando' ? 'warning' : 'danger'}>
-                              {item.status === 'enviado' ? 'Enviado' : item.status === 'procesando' ? 'Procesando' : 'Error'}
-                            </Badge>
-                          </td>
-                          <td>
-                            {item.status === 'enviado' ? (
-                              <span className="text-muted">Correo enviado correctamente.</span>
-                            ) : item.status === 'procesando' ? (
-                              <span className="text-muted">El correo sigue en proceso de envío.</span>
-                            ) : (
-                              <span className="text-danger fw-semibold">
-                                {item.error || 'No se pudo determinar el motivo del fallo.'}
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </Table>
-              </div>
-            </Card.Body>
-          </Card>
+          <EmergencyHistoryCard
+            filteredHistory={filteredHistory}
+            historyQuery={historyQuery}
+            onHistoryQueryChange={setHistoryQuery}
+            historySectionRef={historySectionRef}
+          />
         </>
       )}
     </Container>
