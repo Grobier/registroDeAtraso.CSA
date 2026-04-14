@@ -1,5 +1,6 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Col, Container, Row, Spinner } from 'react-bootstrap';
+import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import EmergencyComposer from '../components/emergencies/EmergencyComposer';
 import EmergencyHero from '../components/emergencies/EmergencyHero';
@@ -51,6 +52,7 @@ const fetchJsonWithTimeout = async (url, options = {}, timeoutMs = 20000) => {
 
 
 const Emergencies = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
   const [selectedCourse, setSelectedCourse] = useState('');
@@ -169,6 +171,33 @@ const Emergencies = () => {
     return lines.join('\n');
   }, [previewValues]);
 
+  const handleSessionExpired = async () => {
+    setMessage({
+      type: 'warning',
+      text: 'Tu sesión expiró. Debes iniciar sesión nuevamente para enviar emergencias.'
+    });
+
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('sessionId');
+
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Sesión vencida',
+      text: 'Debes iniciar sesión nuevamente para continuar.',
+      confirmButtonColor: '#20498f'
+    });
+
+    navigate('/login');
+  };
+
+  const ensureAuthSession = async () => {
+    const authData = await fetchJsonWithTimeout(`${API_BASE_URL}/api/auth/check-auth`, {
+      credentials: 'include'
+    });
+
+    return authData?.authenticated === true;
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -204,6 +233,8 @@ const Emergencies = () => {
   const loadDataWithDiagnostics = async () => {
     setLoading(true);
     try {
+      await ensureAuthSession();
+
       const requests = [
         {
           label: 'cursos',
@@ -251,6 +282,10 @@ const Emergencies = () => {
         });
       }
     } catch (error) {
+      if (error.message?.includes('401') || error.message?.toLowerCase().includes('no autenticado')) {
+        await handleSessionExpired();
+        return;
+      }
       setMessage({ type: 'danger', text: error.message || 'Error al cargar la página de emergencias' });
     } finally {
       setLoading(false);
@@ -403,6 +438,10 @@ const Emergencies = () => {
 
       const data = await response.json();
       if (!response.ok) {
+        if (response.status === 401) {
+          await handleSessionExpired();
+          return;
+        }
         const detailedMessage = data.error
           ? `${data.message || 'No se pudo enviar el aviso de emergencia'}: ${data.error}`
           : (data.message || 'No se pudo enviar el aviso de emergencia');
