@@ -89,7 +89,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
   console.log('Body recibido:', req.body);
 
   try {
-    const { motivo, rut, curso, trajoCertificado, horaManual } = req.body;
+    const { motivo, rut, curso, trajoCertificado, horaManual, fechaManual } = req.body;
     const trajo = ['true', '1', 'on', true, 1, 'True', 'TRUE'].includes(trajoCertificado);
     const certificadoAdjunto = req.file ? req.file.filename : null;
 
@@ -102,6 +102,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
     let horaRegistro;
     let horaRegistroHour;
     let horaRegistroMinute;
+    let fechaRegistro;
 
     if (horaManual) {
       horaRegistro = horaManual;
@@ -112,6 +113,19 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
       horaRegistro = moment().tz('America/Santiago').format('HH:mm');
       horaRegistroHour = moment().tz('America/Santiago').hour();
       horaRegistroMinute = moment().tz('America/Santiago').minute();
+    }
+
+    if (fechaManual) {
+      const fechaHoraManual = moment.tz(
+        `${fechaManual} ${horaRegistro}`,
+        'YYYY-MM-DD HH:mm',
+        'America/Santiago'
+      );
+      fechaRegistro = fechaHoraManual.isValid()
+        ? fechaHoraManual.toDate()
+        : moment().tz('America/Santiago').toDate();
+    } else {
+      fechaRegistro = moment().tz('America/Santiago').toDate();
     }
 
     let concepto = 'presente';
@@ -132,6 +146,7 @@ router.post('/', ensureAuthenticated, upload.single('certificadoAdjunto'), async
     }
 
     const newTardiness = new Tardiness({
+      fecha: fechaRegistro,
       hora: horaRegistro,
       motivo,
       studentRut: searchRut,

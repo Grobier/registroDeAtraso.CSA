@@ -9,6 +9,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
     curso: '',
     estudiante: '',
     motivo: '',
+    fecha: '',
     hora: '',
     trajoCertificado: false,
     certificadoAdjunto: null,
@@ -18,15 +19,16 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const firstInputRef = useRef(null);
 
-  // Obtener hora actual
+  // Obtener fecha y hora actual
   useEffect(() => {
     const now = new Date();
+    const fechaActual = now.toISOString().split('T')[0];
     const horaActual = now.toLocaleTimeString('es-CL', { 
       hour: '2-digit', 
       minute: '2-digit',
       hour12: false  // Usar formato 24 horas para compatibilidad con input time
     });
-    setFormData(prev => ({ ...prev, hora: horaActual }));
+    setFormData(prev => ({ ...prev, fecha: fechaActual, hora: horaActual }));
   }, []);
 
   // Manejar foco y accesibilidad cuando el modal se abre
@@ -127,7 +129,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (!formData.curso || !formData.estudiante || !formData.motivo || !formData.hora) {
+    if (!formData.curso || !formData.estudiante || !formData.motivo || !formData.fecha || !formData.hora) {
       Swal.fire({
         title: 'Campos Incompletos',
         text: 'Por favor complete todos los campos obligatorios',
@@ -147,6 +149,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
         <div class="text-start">
           <p><strong>Estudiante:</strong> ${formData.estudiante}</p>
           <p><strong>Curso:</strong> ${formData.curso}</p>
+          <p><strong>Fecha:</strong> ${new Date(`${formData.fecha}T00:00:00`).toLocaleDateString('es-CL')}</p>
           <p><strong>Hora:</strong> ${formData.hora}</p>
           <p><strong>Motivo:</strong> ${formData.motivo}</p>
           <p><strong>Certificado:</strong> ${formData.trajoCertificado ? 'Sí' : 'No'}</p>
@@ -177,6 +180,7 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
           curso: '',
           estudiante: '',
           motivo: '',
+          fecha: new Date().toISOString().split('T')[0],
           hora: '',
           trajoCertificado: false,
           certificadoAdjunto: null,
@@ -270,6 +274,23 @@ const ManualRegistrationModal = ({ show, onHide, onSave, courses }) => {
           </Row>
 
           <Row>
+            <Col lg={3} md={6}>
+              <Form.Group className="mb-3">
+                <Form.Label>
+                  <FaClock className="me-1" />
+                  Fecha *
+                </Form.Label>
+                <Form.Control
+                  type="date"
+                  name="fecha"
+                  value={formData.fecha}
+                  onChange={handleChange}
+                  required
+                  aria-label="Fecha del atraso"
+                />
+              </Form.Group>
+            </Col>
+
             <Col lg={3} md={6}>
               <Form.Group className="mb-3">
                 <Form.Label>

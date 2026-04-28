@@ -129,6 +129,7 @@ const RegisterTardiness = () => {
       formDataToSend.append('rut', tardinessData.estudiante); // Ahora tardinessData.estudiante contiene solo el RUT
       formDataToSend.append('curso', tardinessData.curso);
       formDataToSend.append('trajoCertificado', tardinessData.trajoCertificado);
+      formDataToSend.append('fechaManual', tardinessData.fecha);
       formDataToSend.append('horaManual', tardinessData.hora); // Enviar la hora manual
       
       if (tardinessData.certificadoAdjunto) {
@@ -139,6 +140,7 @@ const RegisterTardiness = () => {
       console.log('📤 RUT:', tardinessData.estudiante);
       console.log('📤 Curso:', tardinessData.curso);
       console.log('📤 Motivo:', tardinessData.motivo);
+      console.log('📤 Fecha manual:', tardinessData.fecha);
       console.log('📤 Hora manual:', tardinessData.hora);
 
       // Enviar al servidor
@@ -169,6 +171,7 @@ const RegisterTardiness = () => {
             <div class="text-start">
               <p><strong>RUT:</strong> ${tardinessData.estudiante}</p>
               <p><strong>Curso:</strong> ${tardinessData.curso}</p>
+              <p><strong>Fecha registrada:</strong> ${new Date(`${tardinessData.fecha}T00:00:00`).toLocaleDateString('es-CL')}</p>
               <p><strong>Hora registrada:</strong> ${tardinessData.hora}</p>
               <p><strong>Motivo:</strong> ${tardinessData.motivo}</p>
               <hr>
